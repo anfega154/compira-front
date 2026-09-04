@@ -1,0 +1,63 @@
+name: QA frontend
+on:
+  pull_request:
+    branches: [qa]
+  push:
+    branches: [qa]
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: npm }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test:coverage
+      - run: npm run build
+        env:
+          VITE_API_URL: ${{ vars.QA_API_URL }}
+          VITE_OTP_RESEND_COOLDOWN_SECONDS: ${{ vars.VITE_OTP_RESEND_COOLDOWN_SECONDS || '120' }}
+  deploy:
+    if: github.event_name == 'push'
+    needs: quality
+    environment: qa
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: npm }
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_QA_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+      - uses: actions/checkout@v4
+        with:
+          repository: anfega154/compira-back
+          ref: qa
+          path: infrastructure
+          token: ${{ secrets.COMPIRA_BACK_REPOSITORY_TOKEN }}
+      - uses: hashicorp/setup-terraform@v3
+      - name: Create or update frontend hosting
+        working-directory: infrastructure/deployment/terraform/frontend
+        run: |
+          cat > backend.hcl <<EOF_BACKEND
+          bucket         = "${{ vars.QA_TF_STATE_BUCKET }}"
+          key            = "qa/frontend/terraform.tfstate"
+          region         = "${{ vars.AWS_REGION || 'us-east-1' }}"
+          dynamodb_table = "${{ vars.QA_TF_LOCK_TABLE }}"
+          encrypt        = true
+          EOF_BACKEND
+          terraform init -backend-config=backend.hcl
+          terraform apply -auto-approve -var="aws_region=${{ vars.AWS_REGION || 'us-east-1' }}"
+          echo "FRONTEND_BUCKET=$(terraform output -raw bucket_name)" >> "$GITHUB_ENV"
+          echo "CLOUDFRONT_ID=$(terraform output -raw cloudfront_distribution_id)" >> "$GITHUB_ENV"
+      - run: npm ci && npm run build
+        env:
+          VITE_API_URL: ${{ vars.QA_API_URL }}
+          VITE_OTP_RESEND_COOLDOWN_SECONDS: ${{ vars.VITE_OTP_RESEND_COOLDOWN_SECONDS || '120' }}
+      - run: aws s3 sync dist/ "s3://$FRONTEND_BUCKET" --delete
+      - run: aws cloudfront create-invalidation --distribution-id "$CLOUDFRONT_ID" --paths '/*'

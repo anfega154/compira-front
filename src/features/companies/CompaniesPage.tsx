@@ -58,10 +58,10 @@ export function CompaniesPage() {
     <section className="page">
       <header className="page-header">
         <div>
-          <p className="eyebrow">React + Vite</p>
-          <h2>Gestión base de empresas</h2>
+          <p className="eyebrow">Panel principal</p>
+          <h2>Empresas</h2>
           <p className="page-copy">
-            Ejemplo inicial conectado al backend reactivo para listar y crear empresas.
+            Administra las empresas registradas en la plataforma COMPIRA.
           </p>
         </div>
 
@@ -76,7 +76,7 @@ export function CompaniesPage() {
           <div className="panel-header">
             <div>
               <h3>Registrar empresa</h3>
-              <p>Crea un registro usando el endpoint POST del backend.</p>
+              <p>Agrega una nueva empresa a la plataforma.</p>
             </div>
           </div>
 
@@ -111,8 +111,8 @@ export function CompaniesPage() {
         <article className="panel">
           <div className="panel-header">
             <div>
-              <h3>Empresas creadas</h3>
-              <p>Consulta en tiempo real el resultado del backend WebFlux.</p>
+              <h3>Empresas registradas</h3>
+              <p>Consulta el listado de empresas de la organizacion.</p>
             </div>
 
             <button className="secondary-button" type="button" onClick={() => void loadCompanies()} disabled={loading}>

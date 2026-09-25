@@ -21,6 +21,7 @@ export default defineConfig({
         'src/main.tsx',
         'src/App.tsx',
         'src/app/AppShell.tsx',
+        'src/app/CompiraLogo.tsx',
         'src/features/auth/AuthLayout.tsx',
         'src/features/companies/**',
         'src/features/**/types.ts',

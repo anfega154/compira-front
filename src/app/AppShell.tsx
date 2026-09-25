@@ -1,5 +1,12 @@
 import { NavLink, Outlet } from 'react-router-dom'
+import { CompiraLogo } from './CompiraLogo'
 import { useAuth } from '../features/auth/useAuth'
+
+const ROLE_LABELS: Record<string, string> = {
+  ADMINISTRATOR: 'Administrador',
+  COORDINATOR: 'Coordinador',
+  COLLABORATOR: 'Colaborador',
+}
 
 export function AppShell() {
   const { user, endSession } = useAuth()
@@ -8,21 +15,27 @@ export function AppShell() {
     void endSession()
   }
 
+  const roleLabel = user?.roles
+    ?.map((role) => ROLE_LABELS[role] ?? role)
+    .join(' · ')
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <div>
-          <p className="eyebrow">COMPIRA</p>
-          <h1>Portal base</h1>
+          <div className="sidebar-brand">
+            <CompiraLogo variant="mark" size={36} tone="color" />
+            <span className="sidebar-brand-name">COMPIRA</span>
+          </div>
           <p className="sidebar-copy">
-            {user ? `${user.firstName} ${user.lastName}` : 'Frontend inicial en React + Vite'}
+            {user ? `${user.firstName} ${user.lastName}` : 'Gestion centralizada de tareas'}
           </p>
+          {roleLabel ? <span className="sidebar-role">{roleLabel}</span> : null}
         </div>
 
         <nav className="nav-links">
           <NavLink to="/">Empresas</NavLink>
           <NavLink to="/users/register">Registrar usuario</NavLink>
-          <NavLink to="/users/delete">Eliminar usuario</NavLink>
         </nav>
 
         <div className="sidebar-footer">

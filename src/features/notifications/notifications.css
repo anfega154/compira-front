@@ -1,0 +1,15 @@
+.notification-center { position: relative; margin: 0 0 1.5rem auto; width: fit-content; max-width: 100%; }
+.notification-center summary { display: flex; align-items: center; gap: .65rem; cursor: pointer; padding: .65rem 1rem; border: 1px solid rgba(148,163,184,.3); border-radius: .75rem; background: #0f172a; }
+.notification-center summary:focus-visible { outline: 2px solid #38bdf8; outline-offset: 4px; }
+.notification-count { border-radius: 1rem; padding: .1rem .5rem; background: #1e40af; color: #fff; font-size: .8rem; }
+.notification-panel { position: absolute; right: 0; z-index: 10; width: min(25rem, calc(100vw - 3rem)); max-height: 70vh; overflow-y: auto; margin-top: .6rem; padding: 1.25rem; background: #0f172a; border: 1px solid rgba(148,163,184,.3); border-radius: 1rem; box-shadow: 0 1rem 2rem #02061780; }
+.notification-panel h2 { margin: 0; font-size: 1.1rem; }
+.notification-connection, .notification-list time { font-size: .8rem; color: #cbd5e1; }
+.notification-list { list-style: none; padding: 0; margin: 0; }
+.notification-list li { padding: 1rem 0 1rem .75rem; margin: 1rem 0; border-left: 3px solid #38bdf8; border-bottom: 1px solid #334155; overflow-wrap: anywhere; }
+.notification-list p { margin: .4rem 0; }
+.notification-list .notification-overdue { border-left-color: #fb923c; }
+.notification-list .notification-due_soon { border-left-color: #facc15; }
+.organization-settings select { width: 100%; font: inherit; border: 1px solid #475569; border-radius: .75rem; padding: .85rem; background: #0f172a; color: #e2e8f0; }
+.organization-settings .notification-toggle { display: flex; align-items: center; gap: .75rem; }
+.organization-settings .notification-toggle input { width: auto; }

@@ -73,7 +73,7 @@ const sampleTask = {
 }
 
 describe('tasksApi', () => {
-  it('sends the actor email header from the stored user', async () => {
+  it('sends the stored bearer token instead of a caller-supplied identity', async () => {
     mockFetch.mockReturnValueOnce(jsonResponse([sampleTask]))
 
     await getManagedTasks()
@@ -82,7 +82,7 @@ describe('tasksApi', () => {
       expect.stringContaining('/tasks'),
       expect.objectContaining({
         method: 'GET',
-        headers: expect.objectContaining({ 'X-Actor-Email': 'coordinator@compira.co' }),
+        headers: expect.objectContaining({ Authorization: 'Bearer a' }),
       }),
     )
   })

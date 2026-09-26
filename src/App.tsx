@@ -1,3 +1,5 @@
+import { TeamsPage } from './features/teams/TeamsPage'
+import { OrganizationSettingsPage } from './features/organization/OrganizationSettingsPage'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './app/AppShell'
 import { ProtectedRoute } from './app/ProtectedRoute'
@@ -30,6 +32,8 @@ function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
           <Route path="/" element={<CompaniesPage />} />
+          <Route path="/teams" element={<TeamsPage />} />
+          <Route path="/organization/settings" element={<OrganizationSettingsPage />} />
           <Route path="/tasks" element={<TasksPage />} />
           <Route path="/tasks/create" element={<CreateTaskPage />} />
           <Route path="/tasks/assigned" element={<AssignedTasksPage />} />

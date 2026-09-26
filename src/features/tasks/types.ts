@@ -49,6 +49,7 @@ export type TaskHistoryEntry = {
 }
 
 export type CreateTaskPayload = {
+  teamId: string
   title: string
   description?: string
   dueDate?: string

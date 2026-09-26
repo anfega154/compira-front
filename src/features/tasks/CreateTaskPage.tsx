@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { getTeams } from '../teams/teamsApi'
+import type { Team } from '../teams/teamsApi'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TaskRequestError, createTask } from './tasksApi'
@@ -8,6 +10,17 @@ const DESCRIPTION_MAX_LENGTH = 2000
 
 export function CreateTaskPage() {
   const navigate = useNavigate()
+  const [teams, setTeams] = useState<Team[]>([])
+  const [teamId, setTeamId] = useState('')
+  useEffect(() => {
+    const controller = new AbortController()
+    void getTeams(controller.signal).then(response => {
+      if (!controller.signal.aborted) setTeams(response)
+    }).catch(error => {
+      if (!controller.signal.aborted) setError(error instanceof Error ? error.message : 'No se pudieron cargar los equipos.')
+    })
+    return () => controller.abort()
+  }, [])
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -17,7 +30,7 @@ export function CreateTaskPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  const canSubmit = title.trim().length > 0 && !isSubmitting
+  const canSubmit = title.trim().length > 0 && teamId !== '' && !isSubmitting
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -29,6 +42,7 @@ export function CreateTaskPage() {
 
     try {
       const task = await createTask({
+        teamId,
         title: title.trim(),
         description: description.trim() ? description.trim() : undefined,
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
@@ -64,6 +78,14 @@ export function CreateTaskPage() {
       <article className="panel">
         <form className="register-user-form" onSubmit={handleSubmit} noValidate>
           <div className="task-form-grid">
+            <div className="task-form-field full">
+              <label htmlFor="task-team">Equipo</label>
+              <select id="task-team" value={teamId} required disabled={isSubmitting} onChange={event => setTeamId(event.target.value)}>
+                <option value="">Selecciona un equipo que coordinas</option>
+                {teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
+              </select>
+              {teams.length === 0 && <p>Necesitas un equipo asignado por el Administrador para crear tareas.</p>}
+            </div>
             <div className="task-form-field full">
               <label htmlFor="task-title">Titulo</label>
               <input

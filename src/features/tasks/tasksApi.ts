@@ -1,5 +1,5 @@
 import { env } from '../../config/env'
-import { getStoredUser } from '../auth/authStorage'
+import { authorizationHeaders } from '../auth/authenticatedRequest'
 import type {
   AddObservationPayload,
   AssignTaskPayload,
@@ -13,8 +13,6 @@ import type {
   UpdateTaskStatusPayload,
 } from './types'
 
-const ACTOR_EMAIL_HEADER = 'X-Actor-Email'
-
 export class TaskRequestError extends Error {
   readonly code: string
 
@@ -22,14 +20,6 @@ export class TaskRequestError extends Error {
     super(apiError.message)
     this.name = 'TaskRequestError'
     this.code = apiError.code
-  }
-}
-
-function actorHeaders(): HeadersInit {
-  const user = getStoredUser()
-  return {
-    'Content-Type': 'application/json',
-    [ACTOR_EMAIL_HEADER]: user?.email ?? '',
   }
 }
 
@@ -52,31 +42,31 @@ const tasksUrl = `${env.apiUrl}/tasks`
 export async function createTask(payload: CreateTaskPayload): Promise<Task> {
   const response = await fetch(tasksUrl, {
     method: 'POST',
-    headers: actorHeaders(),
+    headers: authorizationHeaders(),
     body: JSON.stringify(payload),
   })
   return handleResponse<Task>(response)
 }
 
 export async function getManagedTasks(): Promise<Task[]> {
-  const response = await fetch(tasksUrl, { method: 'GET', headers: actorHeaders() })
+  const response = await fetch(tasksUrl, { method: 'GET', headers: authorizationHeaders() })
   return handleResponse<Task[]>(response)
 }
 
 export async function getTask(taskId: string): Promise<Task> {
-  const response = await fetch(`${tasksUrl}/${taskId}`, { method: 'GET', headers: actorHeaders() })
+  const response = await fetch(`${tasksUrl}/${taskId}`, { method: 'GET', headers: authorizationHeaders() })
   return handleResponse<Task>(response)
 }
 
 export async function getAssignedTasks(): Promise<Task[]> {
-  const response = await fetch(`${tasksUrl}/assigned`, { method: 'GET', headers: actorHeaders() })
+  const response = await fetch(`${tasksUrl}/assigned`, { method: 'GET', headers: authorizationHeaders() })
   return handleResponse<Task[]>(response)
 }
 
 export async function assignTask(taskId: string, payload: AssignTaskPayload): Promise<Task> {
   const response = await fetch(`${tasksUrl}/${taskId}/assign`, {
     method: 'POST',
-    headers: actorHeaders(),
+    headers: authorizationHeaders(),
     body: JSON.stringify(payload),
   })
   return handleResponse<Task>(response)
@@ -85,7 +75,7 @@ export async function assignTask(taskId: string, payload: AssignTaskPayload): Pr
 export async function reassignTask(taskId: string, payload: ReassignTaskPayload): Promise<Task> {
   const response = await fetch(`${tasksUrl}/${taskId}/reassign`, {
     method: 'POST',
-    headers: actorHeaders(),
+    headers: authorizationHeaders(),
     body: JSON.stringify(payload),
   })
   return handleResponse<Task>(response)
@@ -94,7 +84,7 @@ export async function reassignTask(taskId: string, payload: ReassignTaskPayload)
 export async function updateTaskStatus(taskId: string, payload: UpdateTaskStatusPayload): Promise<Task> {
   const response = await fetch(`${tasksUrl}/${taskId}/status`, {
     method: 'POST',
-    headers: actorHeaders(),
+    headers: authorizationHeaders(),
     body: JSON.stringify(payload),
   })
   return handleResponse<Task>(response)
@@ -103,7 +93,7 @@ export async function updateTaskStatus(taskId: string, payload: UpdateTaskStatus
 export async function cancelTask(taskId: string, payload: CancelTaskPayload): Promise<Task> {
   const response = await fetch(`${tasksUrl}/${taskId}/cancel`, {
     method: 'POST',
-    headers: actorHeaders(),
+    headers: authorizationHeaders(),
     body: JSON.stringify(payload),
   })
   return handleResponse<Task>(response)
@@ -112,7 +102,7 @@ export async function cancelTask(taskId: string, payload: CancelTaskPayload): Pr
 export async function approveTask(taskId: string): Promise<Task> {
   const response = await fetch(`${tasksUrl}/${taskId}/approve`, {
     method: 'POST',
-    headers: actorHeaders(),
+    headers: authorizationHeaders(),
   })
   return handleResponse<Task>(response)
 }
@@ -120,7 +110,7 @@ export async function approveTask(taskId: string): Promise<Task> {
 export async function addObservation(taskId: string, payload: AddObservationPayload): Promise<Task> {
   const response = await fetch(`${tasksUrl}/${taskId}/observations`, {
     method: 'POST',
-    headers: actorHeaders(),
+    headers: authorizationHeaders(),
     body: JSON.stringify(payload),
   })
   return handleResponse<Task>(response)
@@ -129,7 +119,7 @@ export async function addObservation(taskId: string, payload: AddObservationPayl
 export async function getObservations(taskId: string): Promise<TaskObservation[]> {
   const response = await fetch(`${tasksUrl}/${taskId}/observations`, {
     method: 'GET',
-    headers: actorHeaders(),
+    headers: authorizationHeaders(),
   })
   return handleResponse<TaskObservation[]>(response)
 }
@@ -137,7 +127,7 @@ export async function getObservations(taskId: string): Promise<TaskObservation[]
 export async function getTaskHistory(taskId: string): Promise<TaskHistoryEntry[]> {
   const response = await fetch(`${tasksUrl}/${taskId}/history`, {
     method: 'GET',
-    headers: actorHeaders(),
+    headers: authorizationHeaders(),
   })
   return handleResponse<TaskHistoryEntry[]>(response)
 }

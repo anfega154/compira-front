@@ -19,12 +19,15 @@ vi.mock('../tasksApi', () => ({
   },
 }))
 
+vi.mock('../../teams/teamsApi', () => ({ getTeams: vi.fn() }))
+import { getTeams } from '../../teams/teamsApi'
 import { createTask } from '../tasksApi'
 
 const mockCreateTask = vi.mocked(createTask)
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.mocked(getTeams).mockResolvedValue([{ id: 'team-1', name: 'Operaciones', coordinatorUserId: 'c1', coordinatorEmail: 'coordinator@compira.co' }])
 })
 
 afterEach(() => {
@@ -59,6 +62,8 @@ describe('CreateTaskPage', () => {
 
     const { user } = renderWithProviders(<CreateTaskPage />)
 
+    await screen.findByRole('option', { name: 'Operaciones' })
+    await user.selectOptions(screen.getByLabelText('Equipo'), 'team-1')
     await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
     await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
@@ -72,6 +77,8 @@ describe('CreateTaskPage', () => {
 
     const { user } = renderWithProviders(<CreateTaskPage />)
 
+    await screen.findByRole('option', { name: 'Operaciones' })
+    await user.selectOptions(screen.getByLabelText('Equipo'), 'team-1')
     await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
     await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 

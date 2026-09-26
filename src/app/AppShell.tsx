@@ -1,3 +1,4 @@
+import { NotificationCenter } from '../features/notifications/NotificationCenter'
 import { NavLink, Outlet } from 'react-router-dom'
 import { CompiraLogo } from './CompiraLogo'
 import { useAuth } from '../features/auth/useAuth'
@@ -38,6 +39,8 @@ export function AppShell() {
           <NavLink to="/tasks" end>Tareas del equipo</NavLink>
           <NavLink to="/tasks/assigned">Mis tareas</NavLink>
           <NavLink to="/users/register">Registrar usuario</NavLink>
+          {user?.roles.includes('ADMINISTRATOR') && <NavLink to="/organization/settings">Configuración</NavLink>}
+          {user?.roles.includes('ADMINISTRATOR') && <NavLink to="/teams">Equipos</NavLink>}
         </nav>
 
         <div className="sidebar-footer">
@@ -53,6 +56,7 @@ export function AppShell() {
       </aside>
 
       <main className="content">
+        {user?.roles.some(role => role === 'COORDINATOR' || role === 'COLLABORATOR') && <NotificationCenter key={user.id} />}
         <Outlet />
       </main>
     </div>

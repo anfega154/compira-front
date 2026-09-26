@@ -23,7 +23,6 @@ export default defineConfig({
         'src/app/AppShell.tsx',
         'src/app/CompiraLogo.tsx',
         'src/features/auth/AuthLayout.tsx',
-        'src/features/companies/**',
         'src/features/tasks/TaskDetailPage.tsx',
         'src/features/tasks/TaskStatusBadge.tsx',
         'src/features/**/types.ts',

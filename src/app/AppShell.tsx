@@ -35,7 +35,6 @@ export function AppShell() {
         </div>
 
         <nav className="nav-links">
-          <NavLink to="/">Empresas</NavLink>
           <NavLink to="/tasks" end>Tareas del equipo</NavLink>
           <NavLink to="/tasks/assigned">Mis tareas</NavLink>
           <NavLink to="/users/register">Registrar usuario</NavLink>

@@ -9,7 +9,7 @@ import { LoginPage } from './features/auth/LoginPage'
 import { NewPasswordPage } from './features/auth/NewPasswordPage'
 import { OtpVerificationPage } from './features/auth/OtpVerificationPage'
 import { PasswordRecoveryPage } from './features/auth/PasswordRecoveryPage'
-import { CompaniesPage } from './features/companies/CompaniesPage'
+import { useAuth } from './features/auth/useAuth'
 import { AssignedTasksPage } from './features/tasks/AssignedTasksPage'
 import { CreateTaskPage } from './features/tasks/CreateTaskPage'
 import { TaskDetailPage } from './features/tasks/TaskDetailPage'
@@ -18,6 +18,10 @@ import { DeleteUserPage } from './features/users/DeleteUserPage'
 import { RegisterUserPage } from './features/users/RegisterUserPage'
 
 function App() {
+  const { user } = useAuth()
+  const homePath = user?.roles.some(role => role === 'ADMINISTRATOR' || role === 'COORDINATOR')
+    ? '/tasks' : '/tasks/assigned'
+
   return (
     <Routes>
       <Route element={<PublicRoute />}>
@@ -31,7 +35,7 @@ function App() {
 
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
-          <Route path="/" element={<CompaniesPage />} />
+          <Route path="/" element={<Navigate to={homePath} replace />} />
           <Route path="/teams" element={<TeamsPage />} />
           <Route path="/organization/settings" element={<OrganizationSettingsPage />} />
           <Route path="/tasks" element={<TasksPage />} />

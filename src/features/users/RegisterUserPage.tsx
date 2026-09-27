@@ -101,7 +101,7 @@ export function RegisterUserPage() {
         </div>
       </header>
 
-      <article className="panel">
+      <article className="panel form-panel">
         <form className="register-user-form" onSubmit={handleSubmit} noValidate>
           <div className="register-form-grid">
             <div className="register-form-field">

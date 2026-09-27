@@ -47,7 +47,7 @@ function SettingsForm() {
   return <section className="page organization-settings">
     <header className="page-header"><div><p className="eyebrow">Administración</p><h2>Configuración de la organización</h2>
       <p className="page-copy">Una zona horaria y un interruptor de notificaciones para toda la organización.</p></div></header>
-    <article className="panel">
+    <article className="panel form-panel">
       {error && <p className="feedback error" role="alert">{error}</p>}
       {!settings && (error ? <button type="button" className="secondary-button" onClick={() => { setError(''); setAttempt(attempt + 1) }}>Reintentar</button> : <p role="status">Cargando configuración…</p>)}
       {settings && <form className="register-user-form" onSubmit={handleSubmit}>

@@ -61,7 +61,7 @@ export function DeleteUserPage() {
         </div>
       </header>
 
-      <article className="panel">
+      <article className="panel form-panel">
         <form className="delete-user-form" onSubmit={handleRequestDelete} noValidate>
           <div className="register-form-field">
             <label htmlFor="delete-user-email">Correo electronico del usuario</label>

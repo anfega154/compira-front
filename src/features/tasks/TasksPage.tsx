@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   TaskRequestError,
@@ -7,17 +7,21 @@ import {
   getManagedTasks,
   reassignTask,
 } from './tasksApi'
+import { TaskActionModal } from './TaskActionModal'
 import { TaskStatusBadge } from './TaskStatusBadge'
 import { formatDateTime } from './taskLabels'
 import type { Task } from './types'
 
 export function TasksPage() {
   const navigate = useNavigate()
+  const headingRef = useRef<HTMLHeadingElement>(null)
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [busyTaskId, setBusyTaskId] = useState<string | null>(null)
+
+  const [taskAction, setTaskAction] = useState<{ task: Task; action: 'reassign' | 'cancel' } | null>(null)
 
   useEffect(() => {
     void loadTasks()
@@ -51,37 +55,17 @@ export function TasksPage() {
     }
   }
 
-  async function handleCancel(taskId: string) {
-    const reason = window.prompt('Motivo de la cancelacion (opcional):') ?? undefined
-    setBusyTaskId(taskId)
+  async function handleTaskAction(taskId: string, action: 'reassign' | 'cancel', value: string) {
     setActionMessage(null)
     setError(null)
-    try {
-      await cancelTask(taskId, { reason })
-      setActionMessage('Tarea cancelada.')
-      await loadTasks()
-    } catch (requestError) {
-      setError(getErrorMessage(requestError))
-    } finally {
-      setBusyTaskId(null)
-    }
-  }
-
-  async function handleReassign(taskId: string) {
-    const newResponsibleEmail = window.prompt('Correo del nuevo responsable:')
-    if (!newResponsibleEmail) return
-    setBusyTaskId(taskId)
-    setActionMessage(null)
-    setError(null)
-    try {
-      await reassignTask(taskId, { newResponsibleEmail: newResponsibleEmail.trim() })
+    if (action === 'reassign') {
+      await reassignTask(taskId, { newResponsibleEmail: value })
       setActionMessage('Tarea reasignada.')
-      await loadTasks()
-    } catch (requestError) {
-      setError(getErrorMessage(requestError))
-    } finally {
-      setBusyTaskId(null)
+    } else {
+      await cancelTask(taskId, { reason: value || undefined })
+      setActionMessage('Tarea cancelada.')
     }
+    await loadTasks()
   }
 
   return (
@@ -89,7 +73,7 @@ export function TasksPage() {
       <header className="page-header">
         <div>
           <p className="eyebrow">Gestion de tareas</p>
-          <h2>Tareas del equipo</h2>
+          <h2 ref={headingRef} tabIndex={-1}>Tareas del equipo</h2>
           <p className="page-copy">Crea, asigna y da seguimiento a las tareas que gestionas.</p>
         </div>
         <button type="button" className="primary-button" onClick={() => navigate('/tasks/create')}>
@@ -140,7 +124,7 @@ export function TasksPage() {
                       <button
                         type="button"
                         className="task-action-button"
-                        onClick={() => void handleReassign(task.id)}
+                        onClick={() => setTaskAction({ task, action: 'reassign' })}
                         disabled={busyTaskId === task.id || task.status === 'CLOSED' || task.status === 'CANCELLED'}
                       >
                         Reasignar
@@ -156,7 +140,7 @@ export function TasksPage() {
                       <button
                         type="button"
                         className="task-action-button danger"
-                        onClick={() => void handleCancel(task.id)}
+                        onClick={() => setTaskAction({ task, action: 'cancel' })}
                         disabled={busyTaskId === task.id || task.status === 'CLOSED' || task.status === 'CANCELLED'}
                       >
                         Cancelar
@@ -169,6 +153,10 @@ export function TasksPage() {
           </table>
         </div>
       </article>
+      {taskAction && <TaskActionModal action={taskAction.action} taskTitle={taskAction.task.title}
+        fallbackFocusRef={headingRef}
+        onSubmit={value => handleTaskAction(taskAction.task.id, taskAction.action, value)}
+        onClose={() => setTaskAction(null)} />}
     </section>
   )
 }

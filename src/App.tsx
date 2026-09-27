@@ -42,8 +42,10 @@ function App() {
           <Route path="/tasks/create" element={<CreateTaskPage />} />
           <Route path="/tasks/assigned" element={<AssignedTasksPage />} />
           <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
-          <Route path="/users/register" element={<RegisterUserPage />} />
-          <Route path="/users/delete" element={<DeleteUserPage />} />
+          <Route element={<ProtectedRoute allowedRoles={['ADMINISTRATOR']} />}>
+            <Route path="/users/register" element={<RegisterUserPage />} />
+            <Route path="/users/delete" element={<DeleteUserPage />} />
+          </Route>
         </Route>
       </Route>
 

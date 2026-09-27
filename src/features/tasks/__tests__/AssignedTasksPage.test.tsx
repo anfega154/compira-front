@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderWithProviders } from '../../../test/render'
 import { AssignedTasksPage } from '../AssignedTasksPage'
@@ -22,7 +22,7 @@ vi.mock('../tasksApi', () => ({
   },
 }))
 
-import { getAssignedTasks, updateTaskStatus } from '../tasksApi'
+import { getAssignedTasks, updateTaskStatus, addObservation } from '../tasksApi'
 
 const mockGetAssigned = vi.mocked(getAssignedTasks)
 const mockUpdateStatus = vi.mocked(updateTaskStatus)
@@ -79,4 +79,60 @@ describe('AssignedTasksPage', () => {
 
     await waitFor(() => expect(mockUpdateStatus).toHaveBeenCalledWith('t1', { status: 'IN_PROGRESS' }))
   })
+})
+
+
+it('records a trimmed multiline observation using an application modal', async () => {
+  mockGetAssigned.mockResolvedValue([buildTask()])
+  vi.mocked(addObservation).mockResolvedValue(buildTask())
+  const { user } = renderWithProviders(<AssignedTasksPage />)
+  await user.click(await screen.findByRole('button', { name: 'Observacion' }))
+  expect(screen.getByRole('dialog', { name: 'Agregar observación' })).toBeVisible()
+  const field = screen.getByLabelText('Observación')
+  expect(field).toHaveAttribute('maxlength', '2000')
+  const submit = screen.getByRole('button', { name: 'Guardar observación' })
+  await user.type(field, '   ')
+  expect(submit).toBeDisabled()
+  await user.type(field, 'Primera línea{Enter}Segunda línea  ')
+  await user.click(submit)
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  expect(addObservation).toHaveBeenCalledWith('t1', { content: 'Primera línea\nSegunda línea' })
+  expect(screen.getByRole('status')).toHaveTextContent('Observacion registrada.')
+})
+
+
+it('blocks duplicate submission and dismissal while saving an observation', async () => {
+  mockGetAssigned.mockResolvedValue([buildTask()])
+  let completeSave: (task: Task) => void = () => {}
+  vi.mocked(addObservation).mockReturnValue(new Promise(resolve => { completeSave = resolve }))
+  const { user } = renderWithProviders(<AssignedTasksPage />)
+  await user.click(await screen.findByRole('button', { name: 'Observacion' }))
+  await user.type(screen.getByLabelText('Observación'), 'Avance registrado')
+  await user.dblClick(screen.getByRole('button', { name: 'Guardar observación' }))
+  expect(addObservation).toHaveBeenCalledTimes(1)
+  const dialog = screen.getByRole('dialog')
+  expect(within(dialog).getByRole('status')).toHaveTextContent('Guardando cambios…')
+  expect(within(dialog).getByRole('button', { name: 'Cerrar modal' })).toBeDisabled()
+  expect(within(dialog).getByRole('button', { name: 'Cancelar', exact: true })).toBeDisabled()
+  fireEvent(dialog, new Event('cancel', { bubbles: false, cancelable: true }))
+  expect(dialog).toBeVisible()
+  await act(async () => completeSave(buildTask()))
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+})
+
+it('closes with Escape without saving, restores focus and resets the next form', async () => {
+  mockGetAssigned.mockResolvedValue([buildTask()])
+  const { user } = renderWithProviders(<AssignedTasksPage />)
+  const trigger = await screen.findByRole('button', { name: 'Observacion' })
+  await user.click(trigger)
+  await user.type(screen.getByLabelText('Observación'), 'Borrador')
+  fireEvent(screen.getByRole('dialog'), new Event('cancel', { bubbles: false, cancelable: true }))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(addObservation).not.toHaveBeenCalled()
+  expect(trigger).toHaveFocus()
+  expect(document.body.style.overflow).not.toBe('hidden')
+  await user.click(trigger)
+  expect(screen.getByLabelText('Observación')).toHaveValue('')
+  await user.click(screen.getByRole('button', { name: 'Cerrar modal' }))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })

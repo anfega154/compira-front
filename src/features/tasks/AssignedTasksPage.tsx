@@ -6,6 +6,7 @@ import {
   getAssignedTasks,
   updateTaskStatus,
 } from './tasksApi'
+import { TaskActionModal } from './TaskActionModal'
 import { TaskStatusBadge } from './TaskStatusBadge'
 import { formatDateTime } from './taskLabels'
 import type { CollaboratorTargetStatus, Task } from './types'
@@ -29,6 +30,8 @@ export function AssignedTasksPage() {
   const [error, setError] = useState<string | null>(null)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [busyTaskId, setBusyTaskId] = useState<string | null>(null)
+
+  const [observationTask, setObservationTask] = useState<Task | null>(null)
 
   useEffect(() => {
     void loadTasks()
@@ -62,20 +65,11 @@ export function AssignedTasksPage() {
     }
   }
 
-  async function handleAddObservation(taskId: string) {
-    const content = window.prompt('Escribe tu observacion:')
-    if (!content || !content.trim()) return
-    setBusyTaskId(taskId)
+  async function handleAddObservation(taskId: string, content: string) {
     setActionMessage(null)
     setError(null)
-    try {
-      await addObservation(taskId, { content: content.trim() })
-      setActionMessage('Observacion registrada.')
-    } catch (requestError) {
-      setError(getErrorMessage(requestError))
-    } finally {
-      setBusyTaskId(null)
-    }
+    await addObservation(taskId, { content })
+    setActionMessage('Observacion registrada.')
   }
 
   return (
@@ -142,7 +136,7 @@ export function AssignedTasksPage() {
                       <button
                         type="button"
                         className="task-action-button"
-                        onClick={() => void handleAddObservation(task.id)}
+                        onClick={() => setObservationTask(task)}
                         disabled={busyTaskId === task.id}
                       >
                         Observacion
@@ -155,6 +149,8 @@ export function AssignedTasksPage() {
           </table>
         </div>
       </article>
+      {observationTask && <TaskActionModal action="observation" taskTitle={observationTask.title}
+        onSubmit={value => handleAddObservation(observationTask.id, value)} onClose={() => setObservationTask(null)} />}
     </section>
   )
 }

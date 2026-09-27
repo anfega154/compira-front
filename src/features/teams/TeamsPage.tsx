@@ -6,10 +6,13 @@ import type { Team } from './teamsApi'
 
 export function TeamsPage() {
   const { user } = useAuth()
-  return user?.roles.includes('ADMINISTRATOR') ? <TeamAdministration /> : <p role="alert">Solo el Administrador puede gestionar equipos.</p>
+  const isAdministrator = user?.roles.includes('ADMINISTRATOR') ?? false
+  return user && (isAdministrator || user.roles.includes('COORDINATOR'))
+    ? <TeamAdministration key={`${user.id}:${isAdministrator}`} isAdministrator={isAdministrator} />
+    : <p role="alert">Solo el Administrador o Coordinador puede gestionar equipos.</p>
 }
 
-function TeamAdministration() {
+function TeamAdministration({ isAdministrator }: { isAdministrator: boolean }) {
   const [teams, setTeams] = useState<Team[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -56,27 +59,27 @@ function TeamAdministration() {
     {success && <p className="feedback success" role="status">{success}</p>}
     {isLoading ? <p role="status">Cargando equipos…</p> : <>
       {error && <button className="secondary-button" onClick={() => { setError(''); setIsLoading(true); setAttempt(attempt + 1) }}>Recargar equipos</button>}
-      <article className="panel"><h3>Crear equipo</h3>
+      {isAdministrator && <article className="panel form-panel"><h3>Crear equipo</h3>
         <form className="register-user-form" onSubmit={handleCreate}>
           <div className="task-form-field"><label htmlFor="team-name">Nombre del equipo</label><input id="team-name" value={name} required disabled={isSaving} onChange={event => setName(event.target.value)} /></div>
           <div className="task-form-field"><label htmlFor="team-coordinator">Correo del coordinador inicial</label><input id="team-coordinator" type="email" value={coordinatorEmail} required disabled={isSaving} onChange={event => setCoordinatorEmail(event.target.value)} /></div>
           <button className="primary-button" disabled={isSaving || !name.trim()}>{isSaving ? 'Creando…' : 'Crear equipo'}</button>
         </form>
-      </article>
-      <article className="panel"><h3>Gestionar equipo</h3>
-        {teams.length === 0 ? <p>No hay equipos. Crea el primero para habilitar las tareas y alertas.</p> : <>
+      </article>}
+      <article className="panel form-panel"><h3>Gestionar equipo</h3>
+        {teams.length === 0 ? <p>{isAdministrator ? 'No hay equipos. Crea el primero para habilitar las tareas y alertas.' : 'No tienes equipos asignados. Solicita la asignación al Administrador.'}</p> : <>
           <div className="task-form-field"><label htmlFor="selected-team">Equipo</label><select id="selected-team" value={selectedId} onChange={event => setSelectedId(event.target.value)}>
             <option value="">Selecciona un equipo</option>{teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
           </select></div>
-          {selected && <TeamActions key={selected.id} team={selected} onCoordinatorChanged={updated => setTeams(previous => previous.map(team => team.id === updated.id ? updated : team))} />}
+          {selected && <TeamActions key={selected.id} team={selected} isAdministrator={isAdministrator} onCoordinatorChanged={updated => setTeams(previous => previous.map(team => team.id === updated.id ? updated : team))} />}
         </>}
       </article>
     </>}
   </section>
 }
 
-function TeamActions({ team, onCoordinatorChanged }: { team: Team; onCoordinatorChanged: (team: Team) => void }) {
-  const [action, setAction] = useState<'coordinator' | 'member' | 'task'>('coordinator')
+function TeamActions({ team, isAdministrator, onCoordinatorChanged }: { team: Team; isAdministrator: boolean; onCoordinatorChanged: (team: Team) => void }) {
+  const [action, setAction] = useState<'coordinator' | 'member' | 'task'>(isAdministrator ? 'coordinator' : 'member')
   const [input, setInput] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -105,7 +108,7 @@ function TeamActions({ team, onCoordinatorChanged }: { team: Team; onCoordinator
       const selected = event.target.value
       if (selected === 'coordinator' || selected === 'member' || selected === 'task') { setAction(selected); setInput(''); setMessage(''); setError('') }
     }}>
-      <option value="coordinator">Cambiar coordinador</option><option value="member">Vincular colaborador sin equipo</option><option value="task">Vincular tarea existente sin equipo</option>
+      {isAdministrator && <option value="coordinator">Cambiar coordinador</option>}<option value="member">Vincular colaborador sin equipo</option><option value="task">Vincular tarea existente sin equipo</option>
     </select></div>
     <div className="task-form-field"><label htmlFor="team-action-value">{action === 'task' ? 'Identificador de la tarea' : 'Correo del usuario'}</label>
       <input id="team-action-value" type={action === 'task' ? 'text' : 'email'} required value={input} disabled={isSaving} onChange={event => setInput(event.target.value)} /></div>

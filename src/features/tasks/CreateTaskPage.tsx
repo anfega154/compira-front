@@ -75,7 +75,7 @@ export function CreateTaskPage() {
         </button>
       </header>
 
-      <article className="panel">
+      <article className="panel form-panel">
         <form className="register-user-form" onSubmit={handleSubmit} noValidate>
           <div className="task-form-grid">
             <div className="task-form-field full">

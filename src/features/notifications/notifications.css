@@ -10,6 +10,6 @@
 .notification-list p { margin: .4rem 0; }
 .notification-list .notification-overdue { border-left-color: #fb923c; }
 .notification-list .notification-due_soon { border-left-color: #facc15; }
-.organization-settings select { width: 100%; font: inherit; border: 1px solid #475569; border-radius: .75rem; padding: .85rem; background: #0f172a; color: #e2e8f0; }
+.organization-settings select { width: 100%; }
 .organization-settings .notification-toggle { display: flex; align-items: center; gap: .75rem; }
-.organization-settings .notification-toggle input { width: auto; }
+.organization-settings .notification-toggle input { width: 1.1rem; height: 1.1rem; margin: 0; accent-color: #0e7490; }

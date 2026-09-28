@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { PasswordVisibilityButton } from './PasswordVisibilityButton'
+import { INVALID_EMAIL_MESSAGE, isValidEmail } from './emailValidation'
 import { Link, useNavigate } from 'react-router-dom'
 import { AuthRequestError, confirmPasswordRecovery, requestPasswordRecovery } from './authApi'
 import { PasswordCriteriaTooltip } from './PasswordCriteriaTooltip'
@@ -20,11 +22,18 @@ export function PasswordRecoveryPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [emailError, setEmailError] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isPasswordFocused, setIsPasswordFocused] = useState(false)
 
   async function handleRequestCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (isSubmitting) return
+    if (!isValidEmail(email)) {
+      setEmailError(INVALID_EMAIL_MESSAGE)
+      return
+    }
+    setEmailError('')
     setError(null)
     setIsSubmitting(true)
 
@@ -136,14 +145,7 @@ export function PasswordRecoveryPage() {
                 onFocus={() => setIsPasswordFocused(true)}
                 onBlur={() => setIsPasswordFocused(false)}
               />
-              <button
-                type="button"
-                className="toggle-password"
-                onClick={() => setShowPassword((prev) => !prev)}
-                aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
-              >
-                {showPassword ? '🙈' : '👁'}
-              </button>
+              <PasswordVisibilityButton visible={showPassword} onToggle={() => setShowPassword(prev => !prev)} disabled={isSubmitting} />
             </div>
             <PasswordCriteriaTooltip password={newPassword} visible={isPasswordFocused} />
           </div>
@@ -199,14 +201,17 @@ export function PasswordRecoveryPage() {
           <label htmlFor="recovery-email">Correo electronico</label>
           <input
             id="recovery-email"
+            aria-invalid={emailError ? true : undefined}
+            aria-describedby={emailError ? "recovery-email-error" : undefined}
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => { setEmail(e.target.value); setEmailError('') }}
             placeholder="tu@empresa.com"
             autoComplete="email"
             required
             disabled={isSubmitting}
           />
+          {emailError && <span id="recovery-email-error" className="field-hint error" role="alert">{emailError}</span>}
         </div>
 
         {error && (

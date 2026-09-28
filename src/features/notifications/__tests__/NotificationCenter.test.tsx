@@ -49,7 +49,8 @@ describe('NotificationCenter', () => {
     expect(await screen.findByText('Tarea retrasada')).toBeVisible()
     expect(screen.getByText('Próxima a vencer')).toBeVisible()
     expect(screen.getByText('Se te reasignó la tarea')).toBeVisible()
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/notifications/stream'), expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer valid-token' }) }))
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get('Authorization')).toBe('Bearer valid-token')
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/notifications/stream'), expect.objectContaining({ headers: expect.any(Headers) }))
   })
 
   it('clears visible notifications when the global switch disables delivery', async () => {

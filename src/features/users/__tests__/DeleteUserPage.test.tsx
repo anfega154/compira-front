@@ -16,12 +16,7 @@ vi.mock('../../auth/authApi', () => ({
   },
 }))
 
-vi.mock('../../auth/authStorage', () => ({
-  getStoredAccessToken: vi.fn(() => 'admin-token'),
-  getStoredUser: vi.fn(() => null),
-  persistSession: vi.fn(),
-  clearSession: vi.fn(),
-}))
+
 
 import { deleteUser } from '../../auth/authApi'
 
@@ -36,6 +31,15 @@ afterEach(() => {
 })
 
 describe('DeleteUserPage', () => {
+  it('rejects an incomplete email before showing deletion confirmation', async () => {
+    const { user } = renderWithProviders(<DeleteUserPage />)
+    await user.type(screen.getByLabelText('Correo electronico del usuario'), 'user@')
+    await user.click(screen.getByRole('button', { name: 'Eliminar usuario' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('El correo electrónico no tiene un formato válido')
+    expect(screen.queryByRole('button', { name: 'Confirmar eliminacion' })).not.toBeInTheDocument()
+    expect(mockDeleteUser).not.toHaveBeenCalled()
+  })
+
   it('renders form with email input', () => {
     renderWithProviders(<DeleteUserPage />)
 
@@ -81,7 +85,7 @@ describe('DeleteUserPage', () => {
     await user.click(screen.getByRole('button', { name: /eliminar usuario/i }))
     await user.click(screen.getByRole('button', { name: /confirmar eliminacion/i }))
 
-    expect(mockDeleteUser).toHaveBeenCalledWith({ email: 'target@test.com' }, 'admin-token')
+    expect(mockDeleteUser).toHaveBeenCalledWith({ email: 'target@test.com' })
     expect(await screen.findByRole('status')).toHaveTextContent(/target@test\.com.*eliminado correctamente/i)
   })
 

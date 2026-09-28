@@ -77,12 +77,13 @@ describe('tasksApi', () => {
     mockFetch.mockReturnValueOnce(jsonResponse([sampleTask]))
 
     await getManagedTasks()
+    expect(new Headers(mockFetch.mock.calls[0][1].headers).get('Authorization')).toBe('Bearer a')
 
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining('/tasks'),
       expect.objectContaining({
         method: 'GET',
-        headers: expect.objectContaining({ Authorization: 'Bearer a' }),
+        headers: expect.any(Headers),
       }),
     )
   })

@@ -850,3 +850,52 @@ th {
     flex: 1 1 auto;
   }
 }
+
+.register-form-field .input-wrapper {
+  position: relative;
+}
+
+.register-form-field .field-hint.error {
+  color: #fecaca;
+}
+
+.register-form-field .input-wrapper input {
+  width: 100%;
+  padding-right: 52px;
+}
+
+.password-visibility-button {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.password-visibility-button svg {
+  width: 22px;
+  height: 22px;
+}
+
+.password-visibility-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -4px;
+}
+
+.password-visibility-button:hover:not(:disabled) {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.password-visibility-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

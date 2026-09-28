@@ -1,5 +1,5 @@
 import { env } from '../../config/env'
-import { getStoredAccessToken } from './authStorage'
+import { expireSession, getStoredAccessToken, isSessionExpired } from './authStorage'
 
 export class ApiRequestError extends Error {
   readonly status: number
@@ -12,15 +12,25 @@ export class ApiRequestError extends Error {
   }
 }
 
-export function authorizationHeaders(): Record<string, string> {
-  return { 'Content-Type': 'application/json', Authorization: `Bearer ${getStoredAccessToken() ?? ''}` }
+export async function authenticatedFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  const accessToken = getStoredAccessToken()
+  if (!accessToken || isSessionExpired()) {
+    expireSession(accessToken)
+    throw new ApiRequestError(401)
+  }
+  const headers = new Headers(options.headers)
+  if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+  headers.set('Authorization', `Bearer ${accessToken}`)
+  const response = await fetch(`${env.apiUrl}${path}`, { ...options, headers })
+  if (response.status === 401) {
+    expireSession(accessToken)
+    throw new ApiRequestError(401)
+  }
+  return response
 }
 
 export async function authenticatedRequest(path: string, options: RequestInit = {}): Promise<Response> {
-  const response = await fetch(`${env.apiUrl}${path}`, {
-    ...options,
-    headers: { ...authorizationHeaders(), ...options.headers },
-  })
+  const response = await authenticatedFetch(path, options)
   if (!response.ok) throw new ApiRequestError(response.status)
   return response
 }

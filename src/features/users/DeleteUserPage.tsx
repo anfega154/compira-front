@@ -1,17 +1,24 @@
+import { INVALID_EMAIL_MESSAGE, isValidEmail } from '../auth/emailValidation'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { AuthRequestError, deleteUser } from '../auth/authApi'
-import { getStoredAccessToken } from '../auth/authStorage'
 
 export function DeleteUserPage() {
   const [email, setEmail] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [emailError, setEmailError] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [showConfirmation, setShowConfirmation] = useState(false)
 
   function handleRequestDelete(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (isSubmitting) return
+    if (!isValidEmail(email)) {
+      setEmailError(INVALID_EMAIL_MESSAGE)
+      return
+    }
+    setEmailError('')
     setError(null)
     setSuccess(null)
     setShowConfirmation(true)
@@ -21,15 +28,8 @@ export function DeleteUserPage() {
     setError(null)
     setIsSubmitting(true)
 
-    const accessToken = getStoredAccessToken()
-    if (!accessToken) {
-      setError('No se encontro un token de sesion activo.')
-      setIsSubmitting(false)
-      return
-    }
-
     try {
-      await deleteUser({ email }, accessToken)
+      await deleteUser({ email })
       setSuccess(`El usuario ${email} ha sido eliminado correctamente.`)
       setEmail('')
       setShowConfirmation(false)
@@ -55,8 +55,7 @@ export function DeleteUserPage() {
         <div>
           <h2>Eliminar usuario</h2>
           <p className="page-copy">
-            Elimina un usuario del sistema. Esta accion es irreversible y eliminara la cuenta tanto
-            de Cognito como de la base de datos local.
+            Elimina un usuario del sistema. Esta accion es irreversible y eliminara la cuenta y su acceso a la plataforma.
           </p>
         </div>
       </header>
@@ -67,14 +66,17 @@ export function DeleteUserPage() {
             <label htmlFor="delete-user-email">Correo electronico del usuario</label>
             <input
               id="delete-user-email"
+            aria-invalid={emailError ? true : undefined}
+            aria-describedby={emailError ? "delete-user-email-error" : undefined}
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setEmailError('') }}
               placeholder="usuario@empresa.com"
               autoComplete="off"
               required
               disabled={isSubmitting}
             />
+          {emailError && <span id="delete-user-email-error" className="field-hint error" role="alert">{emailError}</span>}
           </div>
 
           {error && (

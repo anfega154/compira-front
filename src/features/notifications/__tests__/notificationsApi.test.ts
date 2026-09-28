@@ -1,3 +1,6 @@
+import { beforeEach } from 'vitest'
+import { persistSession } from '../../auth/authStorage'
+import { module3Tokens, module3User } from '../../../test/module3TestData'
 import { afterEach, expect, it, vi } from 'vitest'
 import { module3Notification, module3Stream } from '../../../test/module3TestData'
 import { streamNotifications } from '../notificationsApi'
@@ -25,3 +28,5 @@ it('decodes fragmented CRLF SSE messages and rejects invalid payloads', async ()
   await expect(connection).rejects.toThrow('Respuesta de notificaciones inválida.')
   expect(listener).toHaveBeenCalledWith([module3Notification()])
 })
+
+beforeEach(() => { persistSession(module3User(), module3Tokens) })

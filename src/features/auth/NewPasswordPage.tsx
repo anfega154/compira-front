@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { PasswordVisibilityButton } from './PasswordVisibilityButton'
 import type { FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { AuthRequestError, respondChallenge } from './authApi'
@@ -106,14 +107,7 @@ export function NewPasswordPage() {
               onFocus={() => setIsPasswordFocused(true)}
               onBlur={() => setIsPasswordFocused(false)}
             />
-            <button
-              type="button"
-              className="toggle-password"
-              onClick={() => setShowPassword((prev) => !prev)}
-              aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
-            >
-              {showPassword ? '🙈' : '👁'}
-            </button>
+            <PasswordVisibilityButton visible={showPassword} onToggle={() => setShowPassword(prev => !prev)} disabled={isSubmitting} />
           </div>
           <PasswordCriteriaTooltip password={newPassword} visible={isPasswordFocused} />
         </div>

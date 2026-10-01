@@ -100,4 +100,54 @@ describe('UsersPage (HU-40 / HU-10)', () => {
       expect.objectContaining({ method: 'POST', body: JSON.stringify({ email: 'collaborator@compira.co', temporaryPassword: 'TempPass123*' }) }),
     )
   })
+
+  it('shows a business error when updating roles is rejected', async () => {
+    fetchMock
+      .mockResolvedValueOnce(Response.json([buildUser()]))
+      .mockResolvedValueOnce(Response.json({ code: 'USER_ADMIN_400', message: 'Rol inválido' }, { status: 400 }))
+    const { user } = renderWithProviders(<UsersPage />)
+
+    await user.click(await screen.findByRole('button', { name: 'Editar' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Coordinador' }))
+    await user.click(screen.getByRole('button', { name: 'Guardar roles' }))
+
+    expect(await screen.findByText('Rol inválido')).toBeInTheDocument()
+  })
+
+  it('shows an error when resetting the password fails', async () => {
+    fetchMock
+      .mockResolvedValueOnce(Response.json([buildUser()]))
+      .mockResolvedValueOnce(Response.json({ code: 'USER_ADMIN_404', message: 'Usuario no encontrado' }, { status: 404 }))
+    const { user } = renderWithProviders(<UsersPage />)
+
+    await user.click(await screen.findByRole('button', { name: 'Editar' }))
+    await user.type(screen.getByLabelText('Nueva contraseña temporal'), 'TempPass123*')
+    await user.click(screen.getByRole('button', { name: 'Restablecer contraseña' }))
+
+    expect(await screen.findByText('Usuario no encontrado')).toBeInTheDocument()
+  })
+
+  it('opens and closes the edit panel', async () => {
+    fetchMock.mockResolvedValueOnce(Response.json([buildUser()]))
+    const { user } = renderWithProviders(<UsersPage />)
+
+    await user.click(await screen.findByRole('button', { name: 'Editar' }))
+    expect(screen.getByRole('button', { name: 'Guardar roles' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Cerrar edición' }))
+    expect(screen.queryByRole('button', { name: 'Guardar roles' })).not.toBeInTheDocument()
+  })
+
+  it('reloads the list on demand', async () => {
+    fetchMock
+      .mockResolvedValueOnce(Response.json([buildUser()]))
+      .mockResolvedValueOnce(Response.json([buildUser({ email: 'otro@compira.co', firstName: 'Otro' })]))
+    const { user } = renderWithProviders(<UsersPage />)
+
+    await screen.findByRole('row', { name: /collaborator@compira\.co/i })
+    await user.click(screen.getByRole('button', { name: 'Recargar' }))
+
+    expect(await screen.findByRole('row', { name: /otro@compira\.co/i })).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
 })

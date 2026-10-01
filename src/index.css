@@ -476,6 +476,12 @@ th {
 }
 
 /* ===== Tareas (M2) ===== */
+.task-status-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
 .task-status-badge {
   display: inline-block;
   padding: 0.2rem 0.6rem;

@@ -12,11 +12,15 @@ import { TaskActionModal } from './TaskActionModal'
 import { TaskStatusBadge } from './TaskStatusBadge'
 import { TASK_STATUS_LABELS, formatDateTime } from './taskLabels'
 import type { Task, TaskIndicators, TaskStatus } from './types'
+import { useAuth } from '../auth/useAuth'
+import { canManageTaskLifecycle } from '../auth/permissions'
 
 const STATUS_FILTER_OPTIONS: TaskStatus[] = ['PENDING', 'IN_PROGRESS', 'DELAYED', 'COMPLETED', 'CLOSED', 'CANCELLED']
 
 export function TasksPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const canManageTasks = canManageTaskLifecycle(user)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const [tasks, setTasks] = useState<Task[]>([])
   const [indicators, setIndicators] = useState<TaskIndicators | null>(null)
@@ -92,7 +96,11 @@ export function TasksPage() {
     .sort((left, right) => left.label.localeCompare(right.label))
 
   const filteredTasks = tasks.filter(task => {
-    if (statusFilter && task.status !== statusFilter) return false
+    if (statusFilter === 'DELAYED') {
+      if (!task.overdue) return false
+    } else if (statusFilter && task.status !== statusFilter) {
+      return false
+    }
     if (responsibleFilter && task.responsibleUserId !== responsibleFilter) return false
     if (dueFrom && (!task.dueDate || task.dueDate < dueFrom)) return false
     if (dueTo && (!task.dueDate || task.dueDate > `${dueTo}T23:59:59`)) return false
@@ -114,11 +122,13 @@ export function TasksPage() {
         <div>
           <p className="eyebrow">Gestion de tareas</p>
           <h2 ref={headingRef} tabIndex={-1}>Tareas del equipo</h2>
-          <p className="page-copy">Crea, asigna y da seguimiento a las tareas que gestionas.</p>
+          <p className="page-copy">{canManageTasks ? 'Crea, asigna y da seguimiento a las tareas que gestionas.' : 'Consulta y da seguimiento a las tareas de la organización.'}</p>
         </div>
-        <button type="button" className="primary-button" onClick={() => navigate('/tasks/create')}>
-          Crear tarea
-        </button>
+        {canManageTasks && (
+          <button type="button" className="primary-button" onClick={() => navigate('/tasks/create')}>
+            Crear tarea
+          </button>
+        )}
       </header>
 
       {error ? <div className="feedback error" role="alert">{error}</div> : null}
@@ -176,19 +186,19 @@ export function TasksPage() {
                 <th>Titulo</th>
                 <th>Estado</th>
                 <th>Fecha limite</th>
-                <th>Acciones</th>
+                {canManageTasks && <th>Acciones</th>}
               </tr>
             </thead>
             <tbody>
               {!loading && tasks.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="empty-state">Todavia no hay tareas registradas.</td>
+                  <td colSpan={canManageTasks ? 4 : 3} className="empty-state">Todavia no hay tareas registradas.</td>
                 </tr>
               ) : null}
 
               {!loading && tasks.length > 0 && filteredTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="empty-state">Ninguna tarea coincide con los filtros aplicados.</td>
+                  <td colSpan={canManageTasks ? 4 : 3} className="empty-state">Ninguna tarea coincide con los filtros aplicados.</td>
                 </tr>
               ) : null}
 
@@ -197,8 +207,9 @@ export function TasksPage() {
                   <td>
                     <Link to={`/tasks/${task.id}`}>{task.title}</Link>
                   </td>
-                  <td><TaskStatusBadge status={task.status} /></td>
+                  <td><TaskStatusBadge status={task.status} overdue={task.overdue} /></td>
                   <td>{formatDateTime(task.dueDate)}</td>
+                  {canManageTasks ? (
                   <td>
                     <div className="task-actions">
                       <button
@@ -227,6 +238,7 @@ export function TasksPage() {
                       </button>
                     </div>
                   </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>

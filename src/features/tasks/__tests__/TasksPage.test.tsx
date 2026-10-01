@@ -1,6 +1,8 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderWithProviders } from '../../../test/render'
+import { module3Tokens, module3User } from '../../../test/module3TestData'
+import { persistSession } from '../../auth/authStorage'
 import { TasksPage } from '../TasksPage'
 import type { Task } from '../types'
 
@@ -37,6 +39,7 @@ function buildTask(overrides: Partial<Task> = {}): Task {
     description: null,
     dueDate: null,
     status: 'COMPLETED',
+    overdue: false,
     responsibleUserId: 'r1',
     createdByUserId: 'c1',
     createdAt: '',
@@ -47,6 +50,7 @@ function buildTask(overrides: Partial<Task> = {}): Task {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  persistSession(module3User('COORDINATOR'), module3Tokens)
   mockGetIndicators.mockResolvedValue({ totalTasks: 0, overdueCount: 0, dueSoonCount: 0, closedCount: 0, closedOnTimeCount: 0, compliancePercentage: null, workloadByAssignee: [], assignees: [] })
 })
 
@@ -111,6 +115,20 @@ describe('TasksPage', () => {
     const responsibleSelect = screen.getByLabelText('Responsable')
     expect(screen.getByRole('option', { name: 'Ana García' })).toBeInTheDocument()
     expect(within(responsibleSelect).queryByText('r1')).not.toBeInTheDocument()
+  })
+
+  it('hides lifecycle actions and create button for an administrator (read-only board)', async () => {
+    persistSession(module3User('ADMINISTRATOR'), module3Tokens)
+    mockGetManaged.mockResolvedValueOnce([buildTask({ status: 'COMPLETED' })])
+
+    renderWithProviders(<TasksPage />)
+
+    await screen.findByText('Preparar informe')
+    expect(screen.queryByRole('button', { name: 'Crear tarea' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reasignar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Aprobar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Cancelar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Acciones' })).not.toBeInTheDocument()
   })
 
   it('shows indicators including compliance', async () => {

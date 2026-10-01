@@ -66,6 +66,7 @@ const sampleTask = {
   description: null,
   dueDate: null,
   status: 'PENDING',
+  overdue: false,
   responsibleUserId: null,
   createdByUserId: 'u1',
   createdAt: '',

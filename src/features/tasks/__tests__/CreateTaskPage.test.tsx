@@ -54,6 +54,7 @@ describe('CreateTaskPage', () => {
       description: null,
       dueDate: null,
       status: 'PENDING',
+      overdue: false,
       responsibleUserId: null,
       createdByUserId: 'c1',
       createdAt: '',

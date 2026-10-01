@@ -23,6 +23,7 @@ export type Task = {
   description: string | null
   dueDate: string | null
   status: TaskStatus
+  overdue: boolean
   responsibleUserId: string | null
   createdByUserId: string
   createdAt: string

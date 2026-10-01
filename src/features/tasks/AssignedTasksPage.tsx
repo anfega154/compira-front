@@ -17,10 +17,6 @@ const NEXT_STATUS_ACTIONS: Record<string, { label: string; target: CollaboratorT
     { label: 'Completar', target: 'COMPLETED' },
     { label: 'Volver a pendiente', target: 'PENDING' },
   ],
-  DELAYED: [
-    { label: 'Retomar', target: 'IN_PROGRESS' },
-    { label: 'Completar', target: 'COMPLETED' },
-  ],
   COMPLETED: [{ label: 'Reabrir', target: 'IN_PROGRESS' }],
 }
 
@@ -118,7 +114,7 @@ export function AssignedTasksPage() {
                   <td>
                     <Link to={`/tasks/${task.id}`}>{task.title}</Link>
                   </td>
-                  <td><TaskStatusBadge status={task.status} /></td>
+                  <td><TaskStatusBadge status={task.status} overdue={task.overdue} /></td>
                   <td>{formatDateTime(task.dueDate)}</td>
                   <td>
                     <div className="task-actions">

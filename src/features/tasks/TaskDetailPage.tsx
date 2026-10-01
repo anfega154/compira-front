@@ -69,7 +69,7 @@ export function TaskDetailPage() {
           <h2>{task.title}</h2>
           <p className="page-copy">{task.description ?? 'Sin descripcion'}</p>
         </div>
-        <TaskStatusBadge status={task.status} />
+        <TaskStatusBadge status={task.status} overdue={task.overdue} />
       </header>
 
       <div className="task-detail-grid">

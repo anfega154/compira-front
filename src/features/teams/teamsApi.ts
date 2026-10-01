@@ -33,6 +33,10 @@ export async function addTeamMember(teamId: string, email: string): Promise<void
   await authenticatedRequest(`${BASE}/${encodeURIComponent(teamId)}/members`, { method: 'POST', body: JSON.stringify({ email }) })
 }
 
+export async function reassignTeamMember(teamId: string, email: string): Promise<void> {
+  await authenticatedRequest(`${BASE}/${encodeURIComponent(teamId)}/members/reassign`, { method: 'POST', body: JSON.stringify({ email }) })
+}
+
 export async function linkExistingTask(teamId: string, taskId: string): Promise<void> {
   await authenticatedRequest(`${BASE}/${encodeURIComponent(teamId)}/tasks`, { method: 'POST', body: JSON.stringify({ taskId }) })
 }

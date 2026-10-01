@@ -1,6 +1,8 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderWithProviders } from '../../../test/render'
+import { module3Tokens, module3User } from '../../../test/module3TestData'
+import { persistSession } from '../../auth/authStorage'
 import { TasksPage } from '../TasksPage'
 import type { Task } from '../types'
 
@@ -11,6 +13,7 @@ vi.mock('react-router-dom', async () => {
 
 vi.mock('../tasksApi', () => ({
   getManagedTasks: vi.fn(),
+  getTaskIndicators: vi.fn(),
   approveTask: vi.fn(),
   cancelTask: vi.fn(),
   reassignTask: vi.fn(),
@@ -23,9 +26,10 @@ vi.mock('../tasksApi', () => ({
   },
 }))
 
-import { approveTask, getManagedTasks, reassignTask, cancelTask, TaskRequestError } from '../tasksApi'
+import { approveTask, getManagedTasks, getTaskIndicators, reassignTask, cancelTask, TaskRequestError } from '../tasksApi'
 
 const mockGetManaged = vi.mocked(getManagedTasks)
+const mockGetIndicators = vi.mocked(getTaskIndicators)
 const mockApprove = vi.mocked(approveTask)
 
 function buildTask(overrides: Partial<Task> = {}): Task {
@@ -35,6 +39,7 @@ function buildTask(overrides: Partial<Task> = {}): Task {
     description: null,
     dueDate: null,
     status: 'COMPLETED',
+    overdue: false,
     responsibleUserId: 'r1',
     createdByUserId: 'c1',
     createdAt: '',
@@ -45,6 +50,8 @@ function buildTask(overrides: Partial<Task> = {}): Task {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  persistSession(module3User('COORDINATOR'), module3Tokens)
+  mockGetIndicators.mockResolvedValue({ totalTasks: 0, overdueCount: 0, dueSoonCount: 0, closedCount: 0, closedOnTimeCount: 0, compliancePercentage: null, workloadByAssignee: [], assignees: [] })
 })
 
 afterEach(() => {
@@ -58,7 +65,8 @@ describe('TasksPage', () => {
     renderWithProviders(<TasksPage />)
 
     expect(await screen.findByText('Preparar informe')).toBeInTheDocument()
-    expect(screen.getByText('Completada')).toBeInTheDocument()
+    const row = screen.getByRole('row', { name: /Preparar informe/i })
+    expect(within(row).getByText('Completada')).toBeInTheDocument()
   })
 
   it('shows empty state when there are no tasks', async () => {
@@ -67,6 +75,80 @@ describe('TasksPage', () => {
     renderWithProviders(<TasksPage />)
 
     expect(await screen.findByText(/todavia no hay tareas/i)).toBeInTheDocument()
+  })
+
+  it('filters the listing by status', async () => {
+    mockGetManaged.mockResolvedValueOnce([
+      buildTask({ id: 't1', title: 'Tarea pendiente', status: 'PENDING' }),
+      buildTask({ id: 't2', title: 'Tarea cerrada', status: 'CLOSED' }),
+    ])
+
+    const { user } = renderWithProviders(<TasksPage />)
+
+    expect(await screen.findByText('Tarea pendiente')).toBeInTheDocument()
+    await user.selectOptions(screen.getByLabelText('Estado'), 'PENDING')
+
+    expect(screen.getByText('Tarea pendiente')).toBeInTheDocument()
+    expect(screen.queryByText('Tarea cerrada')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Limpiar filtros' }))
+    expect(screen.getByText('Tarea cerrada')).toBeInTheDocument()
+  })
+
+  it('lists responsibles in the filter by name instead of id', async () => {
+    mockGetManaged.mockResolvedValueOnce([buildTask({ id: 't1', title: 'Tarea de Ana', responsibleUserId: 'r1' })])
+    mockGetIndicators.mockReset()
+    mockGetIndicators.mockResolvedValueOnce({
+      totalTasks: 1,
+      overdueCount: 0,
+      dueSoonCount: 0,
+      closedCount: 0,
+      closedOnTimeCount: 0,
+      compliancePercentage: null,
+      workloadByAssignee: [],
+      assignees: [{ id: 'r1', name: 'Ana García', email: 'ana@compira.co' }],
+    })
+
+    renderWithProviders(<TasksPage />)
+
+    await screen.findByText('Tarea de Ana')
+    const responsibleSelect = screen.getByLabelText('Responsable')
+    expect(screen.getByRole('option', { name: 'Ana García' })).toBeInTheDocument()
+    expect(within(responsibleSelect).queryByText('r1')).not.toBeInTheDocument()
+  })
+
+  it('hides lifecycle actions and create button for an administrator (read-only board)', async () => {
+    persistSession(module3User('ADMINISTRATOR'), module3Tokens)
+    mockGetManaged.mockResolvedValueOnce([buildTask({ status: 'COMPLETED' })])
+
+    renderWithProviders(<TasksPage />)
+
+    await screen.findByText('Preparar informe')
+    expect(screen.queryByRole('button', { name: 'Crear tarea' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reasignar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Aprobar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Cancelar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Acciones' })).not.toBeInTheDocument()
+  })
+
+  it('shows indicators including compliance', async () => {
+    mockGetManaged.mockResolvedValueOnce([])
+    mockGetIndicators.mockReset()
+    mockGetIndicators.mockResolvedValueOnce({
+      totalTasks: 4,
+      overdueCount: 1,
+      dueSoonCount: 1,
+      closedCount: 2,
+      closedOnTimeCount: 1,
+      compliancePercentage: 50,
+      workloadByAssignee: [{ assigneeId: 'u1', assigneeName: 'Ana García', assigneeEmail: 'ana@compira.co', taskCount: 2 }],
+      assignees: [{ id: 'u1', name: 'Ana García', email: 'ana@compira.co' }],
+    })
+
+    renderWithProviders(<TasksPage />)
+
+    expect(await screen.findByText('50%')).toBeInTheDocument()
+    expect(screen.getByText('Ana García')).toBeInTheDocument()
   })
 
   it('enables approve only for completed tasks and approves', async () => {

@@ -476,6 +476,12 @@ th {
 }
 
 /* ===== Tareas (M2) ===== */
+.task-status-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
 .task-status-badge {
   display: inline-block;
   padding: 0.2rem 0.6rem;
@@ -898,4 +904,125 @@ th {
 .password-visibility-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.indicators-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin: 0 0 1.25rem;
+}
+
+.indicator-card {
+  position: relative;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-left: 4px solid #38bdf8;
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(30, 41, 59, 0.55));
+}
+
+.indicator-card dt {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #cbd5e1;
+}
+
+.indicator-card dd {
+  margin: 0.4rem 0 0;
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #f8fafc;
+}
+
+.indicator-card.indicator-total {
+  border-left-color: #38bdf8;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.14), rgba(30, 41, 59, 0.55));
+}
+
+.indicator-card.indicator-total dd {
+  color: #7dd3fc;
+}
+
+.indicator-card.indicator-overdue {
+  border-left-color: #f87171;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.16), rgba(30, 41, 59, 0.55));
+}
+
+.indicator-card.indicator-overdue dd {
+  color: #fca5a5;
+}
+
+.indicator-card.indicator-duesoon {
+  border-left-color: #fbbf24;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.16), rgba(30, 41, 59, 0.55));
+}
+
+.indicator-card.indicator-duesoon dd {
+  color: #fcd34d;
+}
+
+.indicator-card.indicator-compliance {
+  border-left-color: #34d399;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(30, 41, 59, 0.55));
+}
+
+.indicator-card.indicator-compliance dd {
+  color: #6ee7b7;
+}
+
+.indicator-card.indicator-ontime {
+  border-left-color: #2dd4bf;
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.16), rgba(30, 41, 59, 0.55));
+}
+
+.indicator-card.indicator-ontime dd {
+  color: #5eead4;
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.35rem 0;
+  color: #e2e8f0;
+}
+
+.checkbox-field input {
+  width: auto;
+  min-height: auto;
+  accent-color: #38bdf8;
+}
+
+table caption {
+  caption-side: top;
+  text-align: left;
+  color: #cbd5e1;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0 0 0.6rem;
+}
+
+.task-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin: 0 0 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 14px;
+  background: rgba(30, 41, 59, 0.4);
+}
+
+.task-filters .task-form-field {
+  margin: 0;
+  min-width: 160px;
+}
+
+.task-filters > button {
+  margin-left: auto;
 }

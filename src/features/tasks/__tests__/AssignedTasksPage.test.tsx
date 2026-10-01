@@ -34,6 +34,7 @@ function buildTask(overrides: Partial<Task> = {}): Task {
     description: null,
     dueDate: null,
     status: 'PENDING',
+    overdue: false,
     responsibleUserId: 'r1',
     createdByUserId: 'c1',
     createdAt: '',
@@ -78,6 +79,30 @@ describe('AssignedTasksPage', () => {
     await user.click(startButton)
 
     await waitFor(() => expect(mockUpdateStatus).toHaveBeenCalledWith('t1', { status: 'IN_PROGRESS' }))
+  })
+
+  it('marks an overdue in-progress task without offering a redundant resume action', async () => {
+    mockGetAssigned.mockResolvedValue([buildTask({ status: 'IN_PROGRESS', overdue: true, dueDate: '2026-09-01T00:00:00Z' })])
+
+    renderWithProviders(<AssignedTasksPage />)
+
+    const row = await screen.findByRole('row', { name: /Preparar informe/i })
+    expect(within(row).getByText('En progreso')).toBeInTheDocument()
+    expect(within(row).getByText('Retrasada')).toBeInTheDocument()
+    expect(within(row).queryByRole('button', { name: 'Retomar' })).not.toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Completar' })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Volver a pendiente' })).toBeInTheDocument()
+  })
+
+  it('shows the overdue marker on a pending task that passed its due date', async () => {
+    mockGetAssigned.mockResolvedValue([buildTask({ status: 'PENDING', overdue: true, dueDate: '2026-09-01T00:00:00Z' })])
+
+    renderWithProviders(<AssignedTasksPage />)
+
+    const row = await screen.findByRole('row', { name: /Preparar informe/i })
+    expect(within(row).getByText('Pendiente')).toBeInTheDocument()
+    expect(within(row).getByText('Retrasada')).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Iniciar' })).toBeInTheDocument()
   })
 })
 

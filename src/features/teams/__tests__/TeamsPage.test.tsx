@@ -66,6 +66,26 @@ it('keeps team management unavailable to collaborators without requesting teams'
   expect(fetchMock).not.toHaveBeenCalled()
 })
 
+it('lets an administrator reassign a collaborator to the selected team', async () => {
+  persistSession(module3User('ADMINISTRATOR'), module3Tokens)
+  fetchMock.mockResolvedValueOnce(Response.json([module3Team])).mockResolvedValueOnce(new Response(null, { status: 204 }))
+  const { user } = renderWithProviders(<TeamsPage />)
+  await user.selectOptions(await screen.findByLabelText('Equipo'), module3Team.id)
+  await user.selectOptions(screen.getByLabelText('Acción'), 'reassign')
+  await user.type(screen.getByLabelText('Correo del usuario'), 'member@compira.co')
+  await user.click(screen.getByRole('button', { name: 'Guardar cambio' }))
+  await screen.findByText('Cambio guardado.')
+  expect(fetchMock).toHaveBeenLastCalledWith(expect.stringContaining('/teams/team-1/members/reassign'), expect.objectContaining({ method: 'POST' }))
+})
+
+it('hides the reassign action from coordinators', async () => {
+  persistSession(module3User('COORDINATOR'), module3Tokens)
+  fetchMock.mockResolvedValueOnce(Response.json([module3Team]))
+  const { user } = renderWithProviders(<TeamsPage />)
+  await user.selectOptions(await screen.findByLabelText('Equipo'), module3Team.id)
+  expect(screen.queryByRole('option', { name: 'Reasignar colaborador a este equipo' })).not.toBeInTheDocument()
+})
+
 it('shows a refused linking request without reporting success', async () => {
   persistSession(module3User('COORDINATOR'), module3Tokens)
   fetchMock.mockResolvedValueOnce(Response.json([module3Team]))

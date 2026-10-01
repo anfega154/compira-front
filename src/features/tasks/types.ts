@@ -23,6 +23,7 @@ export type Task = {
   description: string | null
   dueDate: string | null
   status: TaskStatus
+  overdue: boolean
   responsibleUserId: string | null
   createdByUserId: string
   createdAt: string
@@ -79,4 +80,45 @@ export type CancelTaskPayload = {
 export type TaskApiError = {
   code: string
   message: string
+}
+
+export type AssigneeWorkload = {
+  assigneeId: string
+  assigneeName: string | null
+  assigneeEmail: string | null
+  taskCount: number
+}
+
+export type Assignee = {
+  id: string
+  name: string | null
+  email: string | null
+}
+
+export type TaskIndicators = {
+  totalTasks: number
+  overdueCount: number
+  dueSoonCount: number
+  closedCount: number
+  closedOnTimeCount: number
+  compliancePercentage: number | null
+  workloadByAssignee: AssigneeWorkload[]
+  assignees: Assignee[]
+}
+
+export type AssigneeReportRow = {
+  assigneeId: string
+  assigneeName: string | null
+  assigneeEmail: string | null
+  totalTasks: number
+  activeTasks: number
+  closedTasks: number
+  closedOnTimeTasks: number
+  overdueTasks: number
+  compliancePercentage: number | null
+  averageClosureHours: number | null
+}
+
+export type TaskReport = {
+  rows: AssigneeReportRow[]
 }

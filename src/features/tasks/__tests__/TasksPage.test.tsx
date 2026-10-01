@@ -47,7 +47,7 @@ function buildTask(overrides: Partial<Task> = {}): Task {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockGetIndicators.mockResolvedValue({ totalTasks: 0, overdueCount: 0, dueSoonCount: 0, closedCount: 0, closedOnTimeCount: 0, compliancePercentage: null, workloadByAssignee: [] })
+  mockGetIndicators.mockResolvedValue({ totalTasks: 0, overdueCount: 0, dueSoonCount: 0, closedCount: 0, closedOnTimeCount: 0, compliancePercentage: null, workloadByAssignee: [], assignees: [] })
 })
 
 afterEach(() => {
@@ -91,6 +91,28 @@ describe('TasksPage', () => {
     expect(screen.getByText('Tarea cerrada')).toBeInTheDocument()
   })
 
+  it('lists responsibles in the filter by name instead of id', async () => {
+    mockGetManaged.mockResolvedValueOnce([buildTask({ id: 't1', title: 'Tarea de Ana', responsibleUserId: 'r1' })])
+    mockGetIndicators.mockReset()
+    mockGetIndicators.mockResolvedValueOnce({
+      totalTasks: 1,
+      overdueCount: 0,
+      dueSoonCount: 0,
+      closedCount: 0,
+      closedOnTimeCount: 0,
+      compliancePercentage: null,
+      workloadByAssignee: [],
+      assignees: [{ id: 'r1', name: 'Ana García', email: 'ana@compira.co' }],
+    })
+
+    renderWithProviders(<TasksPage />)
+
+    await screen.findByText('Tarea de Ana')
+    const responsibleSelect = screen.getByLabelText('Responsable')
+    expect(screen.getByRole('option', { name: 'Ana García' })).toBeInTheDocument()
+    expect(within(responsibleSelect).queryByText('r1')).not.toBeInTheDocument()
+  })
+
   it('shows indicators including compliance', async () => {
     mockGetManaged.mockResolvedValueOnce([])
     mockGetIndicators.mockReset()
@@ -102,6 +124,7 @@ describe('TasksPage', () => {
       closedOnTimeCount: 1,
       compliancePercentage: 50,
       workloadByAssignee: [{ assigneeId: 'u1', assigneeName: 'Ana García', assigneeEmail: 'ana@compira.co', taskCount: 2 }],
+      assignees: [{ id: 'u1', name: 'Ana García', email: 'ana@compira.co' }],
     })
 
     renderWithProviders(<TasksPage />)

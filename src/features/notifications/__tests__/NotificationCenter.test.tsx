@@ -19,7 +19,7 @@ describe('NotificationCenter', () => {
     await act(async () => stream.send(Array.from({ length: 50 }, (_, index) => module3Notification('ASSIGNED', String(101 - index)))))
     expect(screen.queryByText('Se te reasignó la tarea')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cargar anteriores' })).toBeVisible()
-    expect(screen.getByLabelText('Avisos disponibles')).toHaveTextContent('50')
+    expect(screen.getByLabelText('50 avisos sin leer')).toHaveTextContent('50')
   })
 
   it('loads older persisted notifications once and keeps pagination exhausted across live snapshots', async () => {
@@ -34,7 +34,7 @@ describe('NotificationCenter', () => {
     expect(fetchMock).toHaveBeenLastCalledWith(expect.stringContaining('before=51'), expect.anything())
     await act(async () => stream.send(page))
     expect(screen.queryByRole('button', { name: 'Cargar anteriores' })).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Avisos disponibles')).toHaveTextContent('51')
+    expect(screen.getByLabelText('51 avisos sin leer')).toHaveTextContent('51')
   })
 
   it('receives persisted and live assignment, reassignment and deadline alerts without reloading', async () => {
@@ -82,6 +82,33 @@ describe('NotificationCenter', () => {
     expect(await screen.findByText('No tienes acceso a las notificaciones.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reintentar', hidden: true })).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('marks a single notification as read and decreases the unread count', async () => {
+    const stream = module3Stream()
+    fetchMock.mockResolvedValue(stream.response)
+    const { user } = renderWithProviders(<NotificationCenter />)
+    await user.click(screen.getByText('Notificaciones', { selector: 'summary' }))
+    await act(async () => stream.send([module3Notification('ASSIGNED', '2'), module3Notification('REASSIGNED', '1')]))
+    expect(screen.getByLabelText('2 avisos sin leer')).toHaveTextContent('2')
+
+    await user.click(screen.getAllByRole('button', { name: 'Marcar leída' })[0])
+
+    expect(screen.getByLabelText('1 avisos sin leer')).toHaveTextContent('1')
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/notifications\/2\/read$/), expect.objectContaining({ method: 'POST' }))
+  })
+
+  it('marks all notifications as read and hides the unread badge', async () => {
+    const stream = module3Stream()
+    fetchMock.mockResolvedValue(stream.response)
+    const { user } = renderWithProviders(<NotificationCenter />)
+    await user.click(screen.getByText('Notificaciones', { selector: 'summary' }))
+    await act(async () => stream.send([module3Notification('ASSIGNED', '2'), module3Notification('REASSIGNED', '1')]))
+
+    await user.click(screen.getByRole('button', { name: 'Marcar todas como leídas' }))
+
+    expect(screen.queryByLabelText(/avisos sin leer/)).not.toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/notifications\/read-all$/), expect.objectContaining({ method: 'POST' }))
   })
 
   it('aborts the connection on unmount', async () => {

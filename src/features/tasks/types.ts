@@ -88,6 +88,12 @@ export type AssigneeWorkload = {
   taskCount: number
 }
 
+export type Assignee = {
+  id: string
+  name: string | null
+  email: string | null
+}
+
 export type TaskIndicators = {
   totalTasks: number
   overdueCount: number
@@ -96,6 +102,7 @@ export type TaskIndicators = {
   closedOnTimeCount: number
   compliancePercentage: number | null
   workloadByAssignee: AssigneeWorkload[]
+  assignees: Assignee[]
 }
 
 export type AssigneeReportRow = {

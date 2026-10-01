@@ -2,7 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ApiRequestError } from '../auth/authenticatedRequest'
 import { useAuth } from '../auth/useAuth'
-import { getOlderNotifications, NOTIFICATION_PAGE_SIZE, streamNotifications } from './notificationsApi'
+import {
+  getOlderNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  NOTIFICATION_PAGE_SIZE,
+  streamNotifications,
+} from './notificationsApi'
 import type { TaskNotification } from './notificationsApi'
 import './notifications.css'
 
@@ -88,16 +94,51 @@ export function NotificationCenter() {
     }
   }
 
+  async function handleMarkRead(id: string) {
+    setNotifications(previous => previous.map(notification =>
+      notification.id === id && notification.readAt === null
+        ? { ...notification, readAt: new Date().toISOString() }
+        : notification))
+    try {
+      await markNotificationRead(id)
+    } catch {
+      /* el próximo snapshot del stream reconcilia el estado real */
+    }
+  }
+
+  async function handleMarkAllRead() {
+    const now = new Date().toISOString()
+    setNotifications(previous => previous.map(notification =>
+      notification.readAt === null ? { ...notification, readAt: now } : notification))
+    try {
+      await markAllNotificationsRead()
+    } catch {
+      /* el próximo snapshot del stream reconcilia el estado real */
+    }
+  }
+
+  const unreadCount = notifications.filter(notification => notification.readAt === null).length
+
   return (
     <details className="notification-center">
       <summary>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
           <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
         </svg>
-        Notificaciones <span className="notification-count" aria-live="polite" aria-label="Avisos disponibles">{notifications.length}</span>
+        Notificaciones
+        {unreadCount > 0 && (
+          <span className="notification-count" aria-live="polite" aria-label={`${unreadCount} avisos sin leer`}>{unreadCount}</span>
+        )}
       </summary>
       <section className="notification-panel" aria-label="Notificaciones">
-        <h2>Notificaciones</h2>
+        <div className="notification-panel-header">
+          <h2>Notificaciones</h2>
+          {unreadCount > 0 && (
+            <button type="button" className="notification-mark-all" onClick={() => void handleMarkAllRead()}>
+              Marcar todas como leídas
+            </button>
+          )}
+        </div>
         <p className="notification-connection" role="status">
           {status === 'loading' ? 'Conectando…' : status === 'reconnecting' ? 'Conexión interrumpida. Reconectando…'
             : status === 'error' ? 'No tienes acceso a las notificaciones.' : 'Actualizadas en tiempo real'}
@@ -105,13 +146,27 @@ export function NotificationCenter() {
         {status === 'error' && <button type="button" className="secondary-button" onClick={() => setAttempt(attempt + 1)}>Reintentar</button>}
         {status === 'connected' && notifications.length === 0 && <p>No hay notificaciones disponibles.</p>}
         <ul className="notification-list">
-          {notifications.map(notification => (
-            <li key={notification.id} className={`notification-${notification.type.toLowerCase()}`}>
-              <strong>{LABELS[notification.type]}</strong>
-              <p>{notification.taskTitle}</p>
-              <time dateTime={notification.createdAt}>{new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(notification.createdAt))}</time>
-            </li>
-          ))}
+          {notifications.map(notification => {
+            const isUnread = notification.readAt === null
+            return (
+              <li key={notification.id} className={`notification-${notification.type.toLowerCase()}${isUnread ? ' notification-unread' : ' notification-read'}`}>
+                <strong>{LABELS[notification.type]}</strong>
+                <p>
+                  <Link to={`/tasks/${notification.taskId}`} onClick={() => void handleMarkRead(notification.id)}>
+                    {notification.taskTitle}
+                  </Link>
+                </p>
+                <div className="notification-meta">
+                  <time dateTime={notification.createdAt}>{new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(notification.createdAt))}</time>
+                  {isUnread && (
+                    <button type="button" className="notification-mark-read" onClick={() => void handleMarkRead(notification.id)}>
+                      Marcar leída
+                    </button>
+                  )}
+                </div>
+              </li>
+            )
+          })}
         </ul>
         {pageError && <p role="alert">{pageError}</p>}
         {hasOlder && <button className="secondary-button" type="button" disabled={isLoadingOlder} onClick={() => void handleLoadOlder()}>

@@ -78,9 +78,18 @@ export function TasksPage() {
     await loadTasks()
   }
 
+  const responsibleLabels = new Map<string, string>()
+  for (const workload of indicators?.workloadByAssignee ?? []) {
+    responsibleLabels.set(workload.assigneeId, workload.assigneeName ?? workload.assigneeEmail ?? workload.assigneeId)
+  }
+  for (const assignee of indicators?.assignees ?? []) {
+    responsibleLabels.set(assignee.id, assignee.name ?? assignee.email ?? assignee.id)
+  }
+
   const responsibleOptions = Array.from(
     new Set(tasks.map(task => task.responsibleUserId).filter((id): id is string => id !== null)),
-  )
+  ).map(id => ({ id, label: responsibleLabels.get(id) ?? id }))
+    .sort((left, right) => left.label.localeCompare(right.label))
 
   const filteredTasks = tasks.filter(task => {
     if (statusFilter && task.status !== statusFilter) return false
@@ -142,8 +151,8 @@ export function TasksPage() {
             <label htmlFor="filter-responsible">Responsable</label>
             <select id="filter-responsible" value={responsibleFilter} onChange={event => setResponsibleFilter(event.target.value)} disabled={responsibleOptions.length === 0}>
               <option value="">Todos</option>
-              {responsibleOptions.map(id => (
-                <option key={id} value={id}>{id}</option>
+              {responsibleOptions.map(option => (
+                <option key={option.id} value={option.id}>{option.label}</option>
               ))}
             </select>
           </div>
@@ -249,23 +258,23 @@ function TaskIndicatorsPanel({ indicators }: { indicators: TaskIndicators }) {
         </div>
       </div>
       <dl className="indicators-grid">
-        <div className="indicator-card">
+        <div className="indicator-card indicator-total">
           <dt>Tareas totales</dt>
           <dd>{indicators.totalTasks}</dd>
         </div>
-        <div className="indicator-card">
+        <div className="indicator-card indicator-overdue">
           <dt>Retrasadas</dt>
           <dd>{indicators.overdueCount}</dd>
         </div>
-        <div className="indicator-card">
+        <div className="indicator-card indicator-duesoon">
           <dt>Próximas a vencer (24 h)</dt>
           <dd>{indicators.dueSoonCount}</dd>
         </div>
-        <div className="indicator-card">
+        <div className="indicator-card indicator-compliance">
           <dt>Cumplimiento</dt>
           <dd>{indicators.compliancePercentage === null ? '—' : `${indicators.compliancePercentage}%`}</dd>
         </div>
-        <div className="indicator-card">
+        <div className="indicator-card indicator-ontime">
           <dt>Cerradas a tiempo</dt>
           <dd>{indicators.closedOnTimeCount}/{indicators.closedCount}</dd>
         </div>

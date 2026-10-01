@@ -8,7 +8,9 @@ import type {
   Task,
   TaskApiError,
   TaskHistoryEntry,
+  TaskIndicators,
   TaskObservation,
+  TaskReport,
   UpdateTaskStatusPayload,
 } from './types'
 
@@ -49,6 +51,16 @@ export async function createTask(payload: CreateTaskPayload): Promise<Task> {
 export async function getManagedTasks(): Promise<Task[]> {
   const response = await authenticatedFetch(tasksUrl, { method: 'GET' })
   return handleResponse<Task[]>(response)
+}
+
+export async function getTaskIndicators(): Promise<TaskIndicators> {
+  const response = await authenticatedFetch(`${tasksUrl}/indicators`, { method: 'GET' })
+  return handleResponse<TaskIndicators>(response)
+}
+
+export async function getTaskReports(): Promise<TaskReport> {
+  const response = await authenticatedFetch(`${tasksUrl}/reports`, { method: 'GET' })
+  return handleResponse<TaskReport>(response)
 }
 
 export async function getTask(taskId: string): Promise<Task> {

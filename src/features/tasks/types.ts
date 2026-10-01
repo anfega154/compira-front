@@ -80,3 +80,37 @@ export type TaskApiError = {
   code: string
   message: string
 }
+
+export type AssigneeWorkload = {
+  assigneeId: string
+  assigneeName: string | null
+  assigneeEmail: string | null
+  taskCount: number
+}
+
+export type TaskIndicators = {
+  totalTasks: number
+  overdueCount: number
+  dueSoonCount: number
+  closedCount: number
+  closedOnTimeCount: number
+  compliancePercentage: number | null
+  workloadByAssignee: AssigneeWorkload[]
+}
+
+export type AssigneeReportRow = {
+  assigneeId: string
+  assigneeName: string | null
+  assigneeEmail: string | null
+  totalTasks: number
+  activeTasks: number
+  closedTasks: number
+  closedOnTimeTasks: number
+  overdueTasks: number
+  compliancePercentage: number | null
+  averageClosureHours: number | null
+}
+
+export type TaskReport = {
+  rows: AssigneeReportRow[]
+}

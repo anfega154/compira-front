@@ -12,10 +12,12 @@ import { PasswordRecoveryPage } from './features/auth/PasswordRecoveryPage'
 import { useAuth } from './features/auth/useAuth'
 import { AssignedTasksPage } from './features/tasks/AssignedTasksPage'
 import { CreateTaskPage } from './features/tasks/CreateTaskPage'
+import { ReportsPage } from './features/tasks/ReportsPage'
 import { TaskDetailPage } from './features/tasks/TaskDetailPage'
 import { TasksPage } from './features/tasks/TasksPage'
 import { DeleteUserPage } from './features/users/DeleteUserPage'
 import { RegisterUserPage } from './features/users/RegisterUserPage'
+import { UsersPage } from './features/users/UsersPage'
 
 function App() {
   const { user } = useAuth()
@@ -43,8 +45,10 @@ function App() {
           <Route path="/tasks/assigned" element={<AssignedTasksPage />} />
           <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
           <Route element={<ProtectedRoute allowedRoles={['ADMINISTRATOR']} />}>
+            <Route path="/users" element={<UsersPage />} />
             <Route path="/users/register" element={<RegisterUserPage />} />
             <Route path="/users/delete" element={<DeleteUserPage />} />
+            <Route path="/reports" element={<ReportsPage />} />
           </Route>
         </Route>
       </Route>

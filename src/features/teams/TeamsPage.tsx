@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useAuth } from '../auth/useAuth'
-import { addTeamMember, changeCoordinator, createTeam, getTeams, linkExistingTask } from './teamsApi'
+import { addTeamMember, changeCoordinator, createTeam, getTeams, linkExistingTask, reassignTeamMember } from './teamsApi'
 import type { Team } from './teamsApi'
 
 export function TeamsPage() {
@@ -79,7 +79,7 @@ function TeamAdministration({ isAdministrator }: { isAdministrator: boolean }) {
 }
 
 function TeamActions({ team, isAdministrator, onCoordinatorChanged }: { team: Team; isAdministrator: boolean; onCoordinatorChanged: (team: Team) => void }) {
-  const [action, setAction] = useState<'coordinator' | 'member' | 'task'>(isAdministrator ? 'coordinator' : 'member')
+  const [action, setAction] = useState<'coordinator' | 'member' | 'reassign' | 'task'>(isAdministrator ? 'coordinator' : 'member')
   const [input, setInput] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -94,6 +94,7 @@ function TeamActions({ team, isAdministrator, onCoordinatorChanged }: { team: Te
     try {
       if (action === 'coordinator') onCoordinatorChanged(await changeCoordinator(team.id, input.trim()))
       else if (action === 'member') await addTeamMember(team.id, input.trim())
+      else if (action === 'reassign') await reassignTeamMember(team.id, input.trim())
       else await linkExistingTask(team.id, input.trim())
       setInput('')
       setMessage('Cambio guardado.')
@@ -106,13 +107,14 @@ function TeamActions({ team, isAdministrator, onCoordinatorChanged }: { team: Te
     <p>Coordinador actual: <strong>{team.coordinatorEmail}</strong></p>
     <div className="task-form-field"><label htmlFor="team-action">Acción</label><select id="team-action" value={action} disabled={isSaving} onChange={event => {
       const selected = event.target.value
-      if (selected === 'coordinator' || selected === 'member' || selected === 'task') { setAction(selected); setInput(''); setMessage(''); setError('') }
+      if (selected === 'coordinator' || selected === 'member' || selected === 'reassign' || selected === 'task') { setAction(selected); setInput(''); setMessage(''); setError('') }
     }}>
-      {isAdministrator && <option value="coordinator">Cambiar coordinador</option>}<option value="member">Vincular colaborador sin equipo</option><option value="task">Vincular tarea existente sin equipo</option>
+      {isAdministrator && <option value="coordinator">Cambiar coordinador</option>}<option value="member">Vincular colaborador sin equipo</option>{isAdministrator && <option value="reassign">Reasignar colaborador a este equipo</option>}<option value="task">Vincular tarea existente sin equipo</option>
     </select></div>
     <div className="task-form-field"><label htmlFor="team-action-value">{action === 'task' ? 'Identificador de la tarea' : 'Correo del usuario'}</label>
       <input id="team-action-value" type={action === 'task' ? 'text' : 'email'} required value={input} disabled={isSaving} onChange={event => setInput(event.target.value)} /></div>
     {action === 'task' && <p className="page-copy">Las tareas anteriores no tienen equipo. Vincula primero al responsable y luego registra aquí el identificador de su tarea.</p>}
+    {action === 'reassign' && <p className="page-copy">Mueve a un colaborador existente a este equipo. El colaborador siempre conserva un equipo asignado.</p>}
     <button className="primary-button" disabled={isSaving}>{isSaving ? 'Guardando…' : 'Guardar cambio'}</button>
     {message && <p className="feedback success" role="status">{message}</p>}{error && <p className="feedback error" role="alert">{error}</p>}
   </form>

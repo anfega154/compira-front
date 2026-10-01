@@ -5,23 +5,32 @@ import {
   approveTask,
   cancelTask,
   getManagedTasks,
+  getTaskIndicators,
   reassignTask,
 } from './tasksApi'
 import { TaskActionModal } from './TaskActionModal'
 import { TaskStatusBadge } from './TaskStatusBadge'
-import { formatDateTime } from './taskLabels'
-import type { Task } from './types'
+import { TASK_STATUS_LABELS, formatDateTime } from './taskLabels'
+import type { Task, TaskIndicators, TaskStatus } from './types'
+
+const STATUS_FILTER_OPTIONS: TaskStatus[] = ['PENDING', 'IN_PROGRESS', 'DELAYED', 'COMPLETED', 'CLOSED', 'CANCELLED']
 
 export function TasksPage() {
   const navigate = useNavigate()
   const headingRef = useRef<HTMLHeadingElement>(null)
   const [tasks, setTasks] = useState<Task[]>([])
+  const [indicators, setIndicators] = useState<TaskIndicators | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [busyTaskId, setBusyTaskId] = useState<string | null>(null)
 
   const [taskAction, setTaskAction] = useState<{ task: Task; action: 'reassign' | 'cancel' } | null>(null)
+
+  const [statusFilter, setStatusFilter] = useState<TaskStatus | ''>('')
+  const [responsibleFilter, setResponsibleFilter] = useState<string>('')
+  const [dueFrom, setDueFrom] = useState<string>('')
+  const [dueTo, setDueTo] = useState<string>('')
 
   useEffect(() => {
     void loadTasks()
@@ -31,8 +40,9 @@ export function TasksPage() {
     setLoading(true)
     setError(null)
     try {
-      const data = await getManagedTasks()
+      const [data, indicatorsData] = await Promise.all([getManagedTasks(), getTaskIndicators()])
       setTasks(data)
+      setIndicators(indicatorsData)
     } catch (requestError) {
       setError(getErrorMessage(requestError))
     } finally {
@@ -68,6 +78,27 @@ export function TasksPage() {
     await loadTasks()
   }
 
+  const responsibleOptions = Array.from(
+    new Set(tasks.map(task => task.responsibleUserId).filter((id): id is string => id !== null)),
+  )
+
+  const filteredTasks = tasks.filter(task => {
+    if (statusFilter && task.status !== statusFilter) return false
+    if (responsibleFilter && task.responsibleUserId !== responsibleFilter) return false
+    if (dueFrom && (!task.dueDate || task.dueDate < dueFrom)) return false
+    if (dueTo && (!task.dueDate || task.dueDate > `${dueTo}T23:59:59`)) return false
+    return true
+  })
+
+  const hasActiveFilters = Boolean(statusFilter || responsibleFilter || dueFrom || dueTo)
+
+  function clearFilters() {
+    setStatusFilter('')
+    setResponsibleFilter('')
+    setDueFrom('')
+    setDueTo('')
+  }
+
   return (
     <section className="page">
       <header className="page-header">
@@ -84,6 +115,8 @@ export function TasksPage() {
       {error ? <div className="feedback error" role="alert">{error}</div> : null}
       {actionMessage ? <div className="feedback success" role="status">{actionMessage}</div> : null}
 
+      {indicators ? <TaskIndicatorsPanel indicators={indicators} /> : null}
+
       <article className="panel">
         <div className="panel-header">
           <div>
@@ -92,6 +125,38 @@ export function TasksPage() {
           </div>
           <button type="button" className="secondary-button" onClick={() => void loadTasks()} disabled={loading}>
             {loading ? 'Consultando...' : 'Recargar'}
+          </button>
+        </div>
+
+        <div className="task-filters" role="group" aria-label="Filtros del panel">
+          <div className="task-form-field">
+            <label htmlFor="filter-status">Estado</label>
+            <select id="filter-status" value={statusFilter} onChange={event => setStatusFilter(event.target.value as TaskStatus | '')}>
+              <option value="">Todos</option>
+              {STATUS_FILTER_OPTIONS.map(status => (
+                <option key={status} value={status}>{TASK_STATUS_LABELS[status]}</option>
+              ))}
+            </select>
+          </div>
+          <div className="task-form-field">
+            <label htmlFor="filter-responsible">Responsable</label>
+            <select id="filter-responsible" value={responsibleFilter} onChange={event => setResponsibleFilter(event.target.value)} disabled={responsibleOptions.length === 0}>
+              <option value="">Todos</option>
+              {responsibleOptions.map(id => (
+                <option key={id} value={id}>{id}</option>
+              ))}
+            </select>
+          </div>
+          <div className="task-form-field">
+            <label htmlFor="filter-due-from">Vence desde</label>
+            <input id="filter-due-from" type="date" value={dueFrom} onChange={event => setDueFrom(event.target.value)} />
+          </div>
+          <div className="task-form-field">
+            <label htmlFor="filter-due-to">Vence hasta</label>
+            <input id="filter-due-to" type="date" value={dueTo} onChange={event => setDueTo(event.target.value)} />
+          </div>
+          <button type="button" className="secondary-button" onClick={clearFilters} disabled={!hasActiveFilters}>
+            Limpiar filtros
           </button>
         </div>
 
@@ -112,7 +177,13 @@ export function TasksPage() {
                 </tr>
               ) : null}
 
-              {tasks.map((task) => (
+              {!loading && tasks.length > 0 && filteredTasks.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="empty-state">Ninguna tarea coincide con los filtros aplicados.</td>
+                </tr>
+              ) : null}
+
+              {filteredTasks.map((task) => (
                 <tr key={task.id}>
                   <td>
                     <Link to={`/tasks/${task.id}`}>{task.title}</Link>
@@ -166,4 +237,64 @@ function getErrorMessage(error: unknown): string {
     return error.message
   }
   return 'Ocurrio un error inesperado. Intenta nuevamente.'
+}
+
+function TaskIndicatorsPanel({ indicators }: { indicators: TaskIndicators }) {
+  return (
+    <article className="panel" aria-label="Indicadores de seguimiento">
+      <div className="panel-header">
+        <div>
+          <h3>Indicadores</h3>
+          <p>Seguimiento en tiempo real del alcance de tus tareas.</p>
+        </div>
+      </div>
+      <dl className="indicators-grid">
+        <div className="indicator-card">
+          <dt>Tareas totales</dt>
+          <dd>{indicators.totalTasks}</dd>
+        </div>
+        <div className="indicator-card">
+          <dt>Retrasadas</dt>
+          <dd>{indicators.overdueCount}</dd>
+        </div>
+        <div className="indicator-card">
+          <dt>Próximas a vencer (24 h)</dt>
+          <dd>{indicators.dueSoonCount}</dd>
+        </div>
+        <div className="indicator-card">
+          <dt>Cumplimiento</dt>
+          <dd>{indicators.compliancePercentage === null ? '—' : `${indicators.compliancePercentage}%`}</dd>
+        </div>
+        <div className="indicator-card">
+          <dt>Cerradas a tiempo</dt>
+          <dd>{indicators.closedOnTimeCount}/{indicators.closedCount}</dd>
+        </div>
+      </dl>
+      <div className="table-wrapper">
+        <table>
+          <caption>Carga de trabajo por responsable</caption>
+          <thead>
+            <tr>
+              <th>Responsable</th>
+              <th>Tareas activas</th>
+            </tr>
+          </thead>
+          <tbody>
+            {indicators.workloadByAssignee.length === 0 ? (
+              <tr>
+                <td colSpan={2} className="empty-state">No hay tareas activas asignadas.</td>
+              </tr>
+            ) : (
+              indicators.workloadByAssignee.map(workload => (
+                <tr key={workload.assigneeId}>
+                  <td>{workload.assigneeName ?? workload.assigneeEmail ?? workload.assigneeId}</td>
+                  <td>{workload.taskCount}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  )
 }

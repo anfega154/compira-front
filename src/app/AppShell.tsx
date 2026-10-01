@@ -37,8 +37,10 @@ export function AppShell() {
         <nav className="nav-links">
           <NavLink to="/tasks" end>Tareas del equipo</NavLink>
           <NavLink to="/tasks/assigned">Mis tareas</NavLink>
+          {user?.roles.includes('ADMINISTRATOR') && <NavLink to="/users" end>Usuarios</NavLink>}
           {user?.roles.includes('ADMINISTRATOR') && <NavLink to="/users/register">Registrar usuario</NavLink>}
           {user?.roles.includes('ADMINISTRATOR') && <NavLink to="/organization/settings">Configuración</NavLink>}
+          {user?.roles.includes('ADMINISTRATOR') && <NavLink to="/reports">Reportes</NavLink>}
           {user?.roles.some(role => role === 'ADMINISTRATOR' || role === 'COORDINATOR') && <NavLink to="/teams">Equipos</NavLink>}
         </nav>
 

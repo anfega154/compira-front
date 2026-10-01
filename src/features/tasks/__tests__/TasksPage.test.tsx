@@ -11,6 +11,7 @@ vi.mock('react-router-dom', async () => {
 
 vi.mock('../tasksApi', () => ({
   getManagedTasks: vi.fn(),
+  getTaskIndicators: vi.fn(),
   approveTask: vi.fn(),
   cancelTask: vi.fn(),
   reassignTask: vi.fn(),
@@ -23,9 +24,10 @@ vi.mock('../tasksApi', () => ({
   },
 }))
 
-import { approveTask, getManagedTasks, reassignTask, cancelTask, TaskRequestError } from '../tasksApi'
+import { approveTask, getManagedTasks, getTaskIndicators, reassignTask, cancelTask, TaskRequestError } from '../tasksApi'
 
 const mockGetManaged = vi.mocked(getManagedTasks)
+const mockGetIndicators = vi.mocked(getTaskIndicators)
 const mockApprove = vi.mocked(approveTask)
 
 function buildTask(overrides: Partial<Task> = {}): Task {
@@ -45,6 +47,7 @@ function buildTask(overrides: Partial<Task> = {}): Task {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockGetIndicators.mockResolvedValue({ totalTasks: 0, overdueCount: 0, dueSoonCount: 0, closedCount: 0, closedOnTimeCount: 0, compliancePercentage: null, workloadByAssignee: [] })
 })
 
 afterEach(() => {
@@ -58,7 +61,8 @@ describe('TasksPage', () => {
     renderWithProviders(<TasksPage />)
 
     expect(await screen.findByText('Preparar informe')).toBeInTheDocument()
-    expect(screen.getByText('Completada')).toBeInTheDocument()
+    const row = screen.getByRole('row', { name: /Preparar informe/i })
+    expect(within(row).getByText('Completada')).toBeInTheDocument()
   })
 
   it('shows empty state when there are no tasks', async () => {
@@ -67,6 +71,43 @@ describe('TasksPage', () => {
     renderWithProviders(<TasksPage />)
 
     expect(await screen.findByText(/todavia no hay tareas/i)).toBeInTheDocument()
+  })
+
+  it('filters the listing by status', async () => {
+    mockGetManaged.mockResolvedValueOnce([
+      buildTask({ id: 't1', title: 'Tarea pendiente', status: 'PENDING' }),
+      buildTask({ id: 't2', title: 'Tarea cerrada', status: 'CLOSED' }),
+    ])
+
+    const { user } = renderWithProviders(<TasksPage />)
+
+    expect(await screen.findByText('Tarea pendiente')).toBeInTheDocument()
+    await user.selectOptions(screen.getByLabelText('Estado'), 'PENDING')
+
+    expect(screen.getByText('Tarea pendiente')).toBeInTheDocument()
+    expect(screen.queryByText('Tarea cerrada')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Limpiar filtros' }))
+    expect(screen.getByText('Tarea cerrada')).toBeInTheDocument()
+  })
+
+  it('shows indicators including compliance', async () => {
+    mockGetManaged.mockResolvedValueOnce([])
+    mockGetIndicators.mockReset()
+    mockGetIndicators.mockResolvedValueOnce({
+      totalTasks: 4,
+      overdueCount: 1,
+      dueSoonCount: 1,
+      closedCount: 2,
+      closedOnTimeCount: 1,
+      compliancePercentage: 50,
+      workloadByAssignee: [{ assigneeId: 'u1', assigneeName: 'Ana García', assigneeEmail: 'ana@compira.co', taskCount: 2 }],
+    })
+
+    renderWithProviders(<TasksPage />)
+
+    expect(await screen.findByText('50%')).toBeInTheDocument()
+    expect(screen.getByText('Ana García')).toBeInTheDocument()
   })
 
   it('enables approve only for completed tasks and approves', async () => {

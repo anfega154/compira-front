@@ -104,6 +104,7 @@ export function RegisterUserPage() {
 
       <article className="panel form-panel">
         <form className="register-user-form" onSubmit={handleSubmit} noValidate>
+          <p className="form-section-title">Datos personales</p>
           <div className="register-form-grid">
             <div className="register-form-field">
               <label htmlFor="register-first-name">Nombre</label>
@@ -178,7 +179,10 @@ export function RegisterUserPage() {
                 />
               </div>
             </div>
+          </div>
 
+          <p className="form-section-title">Acceso y rol</p>
+          <div className="register-form-grid">
             <div className="register-form-field password-field-wrapper">
               <label htmlFor="register-password">Contrasena temporal</label>
               <div className="input-wrapper">

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ApiRequestError } from '../auth/authenticatedRequest'
 import { useAuth } from '../auth/useAuth'
@@ -15,6 +16,13 @@ import './notifications.css'
 const LABELS: Record<TaskNotification['type'], string> = {
   ASSIGNED: 'Se te asignó la tarea', REASSIGNED: 'Se te reasignó la tarea',
   DUE_SOON: 'Próxima a vencer', OVERDUE: 'Tarea retrasada',
+}
+
+const ICONS: Record<TaskNotification['type'], ReactNode> = {
+  ASSIGNED: <path d="M20 6 9 17l-5-5" />,
+  REASSIGNED: <><path d="M3 2v6h6" /><path d="M3 13a9 9 0 1 0 3-7L3 8" /></>,
+  DUE_SOON: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+  OVERDUE: <><path d="M12 9v4M12 17h.01" /><path d="M10.3 3.3 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.3a2 2 0 0 0-3.4 0Z" /></>,
 }
 
 export function NotificationCenter() {
@@ -150,19 +158,26 @@ export function NotificationCenter() {
             const isUnread = notification.readAt === null
             return (
               <li key={notification.id} className={`notification-${notification.type.toLowerCase()}${isUnread ? ' notification-unread' : ' notification-read'}`}>
-                <strong>{LABELS[notification.type]}</strong>
-                <p>
-                  <Link to={`/tasks/${notification.taskId}`} onClick={() => void handleMarkRead(notification.id)}>
-                    {notification.taskTitle}
-                  </Link>
-                </p>
-                <div className="notification-meta">
-                  <time dateTime={notification.createdAt}>{new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(notification.createdAt))}</time>
-                  {isUnread && (
-                    <button type="button" className="notification-mark-read" onClick={() => void handleMarkRead(notification.id)}>
-                      Marcar leída
-                    </button>
-                  )}
+                <span className="notification-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    {ICONS[notification.type]}
+                  </svg>
+                </span>
+                <div className="notification-body">
+                  <strong>{LABELS[notification.type]}</strong>
+                  <p>
+                    <Link to={`/tasks/${notification.taskId}`} onClick={() => void handleMarkRead(notification.id)}>
+                      {notification.taskTitle}
+                    </Link>
+                  </p>
+                  <div className="notification-meta">
+                    <time dateTime={notification.createdAt}>{new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(notification.createdAt))}</time>
+                    {isUnread && (
+                      <button type="button" className="notification-mark-read" onClick={() => void handleMarkRead(notification.id)}>
+                        Marcar leída
+                      </button>
+                    )}
+                  </div>
                 </div>
               </li>
             )

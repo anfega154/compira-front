@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
+import { useAuth } from '../auth/useAuth'
+import { Modal } from '../../app/Modal'
 import type { UserRole } from '../auth/types'
 import {
   UserRequestError,
-  getOrganizationUsers,
+  getUsers,
   resetUserPassword,
   updateUserRoles,
 } from './usersApi'
@@ -21,7 +23,17 @@ const ROLE_LABELS: Record<UserRole, string> = {
   COLLABORATOR: 'Colaborador',
 }
 
+const ROLE_TONE: Record<UserRole, string> = {
+  ADMINISTRATOR: 'status-closed',
+  COORDINATOR: 'status-progress',
+  COLLABORATOR: 'status-pending',
+}
+
 const PASSWORD_MIN_LENGTH = 10
+
+function initials(firstName: string, lastName: string): string {
+  return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || '—'
+}
 
 function formatDateTime(value: string | null): string {
   if (!value) return '—'
@@ -30,10 +42,18 @@ function formatDateTime(value: string | null): string {
 }
 
 export function UsersPage() {
+  const { user } = useAuth()
+  return user?.roles.includes('ADMINISTRATOR')
+    ? <UsersDirectory />
+    : <p role="alert">Solo el Administrador puede consultar la lista de usuarios.</p>
+}
+
+function UsersDirectory() {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const [users, setUsers] = useState<OrganizationUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
   const [selectedEmail, setSelectedEmail] = useState<string | null>(null)
 
   useEffect(() => {
@@ -46,7 +66,7 @@ export function UsersPage() {
     setIsLoading(true)
     setLoadError(null)
     try {
-      const data = await getOrganizationUsers()
+      const data = await getUsers(controller?.signal)
       if (!controller?.signal.aborted) setUsers(data)
     } catch (error) {
       if (!controller?.signal.aborted) {
@@ -60,6 +80,16 @@ export function UsersPage() {
   function handleUserUpdated(updated: OrganizationUser) {
     setUsers(previous => previous.map(user => (user.id === updated.id ? updated : user)))
   }
+
+  const filteredUsers = useMemo(() => {
+    const term = search.trim().toLowerCase()
+    if (!term) return users
+    return users.filter(
+      candidate =>
+        `${candidate.firstName} ${candidate.lastName}`.toLowerCase().includes(term) ||
+        candidate.email.toLowerCase().includes(term),
+    )
+  }, [users, search])
 
   const selectedUser = users.find(user => user.email === selectedEmail) ?? null
 
@@ -83,6 +113,21 @@ export function UsersPage() {
           <div>
             <h3>Listado de usuarios</h3>
             <p>Usuarios de la organización con su rol y equipo asignado.</p>
+          </div>
+        </div>
+
+        <div className="filter-bar">
+          <div className="filter-search">
+            <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" />
+            </svg>
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Buscar por nombre o correo"
+              aria-label="Buscar usuarios por nombre o correo"
+            />
           </div>
         </div>
 
@@ -112,13 +157,36 @@ export function UsersPage() {
                 </tr>
               ) : null}
 
-              {!isLoading && users.map(user => (
+              {!isLoading && users.length > 0 && filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="empty-state">Ningún usuario coincide con la búsqueda.</td>
+                </tr>
+              ) : null}
+
+              {!isLoading && filteredUsers.map(user => (
                 <tr key={user.id}>
-                  <td>{`${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || '—'}</td>
+                  <td>
+                    <span className="cell-user">
+                      <span className="cell-avatar" aria-hidden="true">{initials(user.firstName, user.lastName)}</span>
+                      {`${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || '—'}
+                    </span>
+                  </td>
                   <td>{user.email}</td>
-                  <td>{user.roles.map(role => ROLE_LABELS[role] ?? role).join(' · ') || '—'}</td>
-                  <td>{user.teamName ?? '—'}</td>
-                  <td>{user.status}</td>
+                  <td>
+                    <div className="task-actions">
+                      {user.roles.length === 0 ? '—' : user.roles.map(role => (
+                        <span key={role} className={`task-status-badge ${ROLE_TONE[role] ?? 'status-pending'}`}>
+                          {ROLE_LABELS[role] ?? role}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td>{user.teamName ?? <span className="metric-foot">Sin equipo</span>}</td>
+                  <td>
+                    <span className={`task-status-badge ${user.status === 'ACTIVE' ? 'status-completed' : 'status-cancelled'}`}>
+                      {user.status === 'ACTIVE' ? 'Activo' : user.status === 'INACTIVE' ? 'Inactivo' : user.status}
+                    </span>
+                  </td>
                   <td>{formatDateTime(user.lastLoginAt)}</td>
                   <td>
                     <button
@@ -142,10 +210,7 @@ export function UsersPage() {
           key={selectedUser.id}
           user={selectedUser}
           onUserUpdated={handleUserUpdated}
-          onClose={() => {
-            setSelectedEmail(null)
-            headingRef.current?.focus()
-          }}
+          onClose={() => setSelectedEmail(null)}
         />
       ) : null}
     </section>
@@ -216,58 +281,63 @@ function EditUserPanel({ user, onUserUpdated, onClose }: EditUserPanelProps) {
 
   const canReset = temporaryPassword.length >= PASSWORD_MIN_LENGTH && !isResetting
 
+  const isBusy = isSavingRoles || isResetting
+
   return (
-    <article className="panel form-panel" aria-label={`Editar usuario ${user.email}`}>
-      <div className="panel-header">
-        <div>
-          <h3>Editar {user.firstName} {user.lastName}</h3>
-          <p>{user.email}</p>
-        </div>
-        <button type="button" className="secondary-button" onClick={onClose}>Cerrar edición</button>
+    <Modal
+      title={`Editar ${user.firstName} ${user.lastName}`.trim()}
+      description={user.email}
+      onClose={onClose}
+      isBusy={isBusy}
+    >
+      <div className="user-edit-modal">
+        <form className="register-user-form" onSubmit={handleRolesSubmit}>
+          <fieldset className="task-form-field edit-roles-fieldset">
+            <legend className="form-section-title">Roles</legend>
+            {ROLE_OPTIONS.map(option => (
+              <label key={option.value} className="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={roles.includes(option.value)}
+                  disabled={isSavingRoles}
+                  onChange={() => toggleRole(option.value)}
+                />
+                {option.label}
+              </label>
+            ))}
+          </fieldset>
+          <button type="submit" className="primary-button" disabled={isSavingRoles || roles.length === 0}>
+            {isSavingRoles ? 'Guardando…' : 'Guardar roles'}
+          </button>
+          {rolesMessage ? <p className="feedback success" role="status">{rolesMessage}</p> : null}
+          {rolesError ? <p className="feedback error" role="alert">{rolesError}</p> : null}
+        </form>
+
+        <form className="register-user-form" onSubmit={handleResetSubmit}>
+          <div className="task-form-field">
+            <label htmlFor="reset-temporary-password">Nueva contraseña temporal</label>
+            <input
+              id="reset-temporary-password"
+              type="password"
+              value={temporaryPassword}
+              minLength={PASSWORD_MIN_LENGTH}
+              autoComplete="off"
+              disabled={isResetting}
+              onChange={event => { setTemporaryPassword(event.target.value); setResetMessage(null); setResetError(null) }}
+            />
+            <span className="field-hint">Mínimo {PASSWORD_MIN_LENGTH} caracteres. El usuario la cambiará al iniciar sesión.</span>
+          </div>
+          <button type="submit" className="secondary-button" disabled={!canReset}>
+            {isResetting ? 'Restableciendo…' : 'Restablecer contraseña'}
+          </button>
+          {resetMessage ? <p className="feedback success" role="status">{resetMessage}</p> : null}
+          {resetError ? <p className="feedback error" role="alert">{resetError}</p> : null}
+        </form>
+
+        <footer className="app-modal-actions">
+          <button type="button" className="secondary-button" onClick={onClose} disabled={isBusy}>Cerrar edición</button>
+        </footer>
       </div>
-
-      <form className="register-user-form" onSubmit={handleRolesSubmit}>
-        <fieldset className="task-form-field">
-          <legend>Roles</legend>
-          {ROLE_OPTIONS.map(option => (
-            <label key={option.value} className="checkbox-field">
-              <input
-                type="checkbox"
-                checked={roles.includes(option.value)}
-                disabled={isSavingRoles}
-                onChange={() => toggleRole(option.value)}
-              />
-              {option.label}
-            </label>
-          ))}
-        </fieldset>
-        <button type="submit" className="primary-button" disabled={isSavingRoles || roles.length === 0}>
-          {isSavingRoles ? 'Guardando…' : 'Guardar roles'}
-        </button>
-        {rolesMessage ? <p className="feedback success" role="status">{rolesMessage}</p> : null}
-        {rolesError ? <p className="feedback error" role="alert">{rolesError}</p> : null}
-      </form>
-
-      <form className="register-user-form" onSubmit={handleResetSubmit}>
-        <div className="task-form-field">
-          <label htmlFor="reset-temporary-password">Nueva contraseña temporal</label>
-          <input
-            id="reset-temporary-password"
-            type="password"
-            value={temporaryPassword}
-            minLength={PASSWORD_MIN_LENGTH}
-            autoComplete="off"
-            disabled={isResetting}
-            onChange={event => { setTemporaryPassword(event.target.value); setResetMessage(null); setResetError(null) }}
-          />
-          <span className="field-hint">Mínimo {PASSWORD_MIN_LENGTH} caracteres. El usuario la cambiará al iniciar sesión.</span>
-        </div>
-        <button type="submit" className="secondary-button" disabled={!canReset}>
-          {isResetting ? 'Restableciendo…' : 'Restablecer contraseña'}
-        </button>
-        {resetMessage ? <p className="feedback success" role="status">{resetMessage}</p> : null}
-        {resetError ? <p className="feedback error" role="alert">{resetError}</p> : null}
-      </form>
-    </article>
+    </Modal>
   )
 }

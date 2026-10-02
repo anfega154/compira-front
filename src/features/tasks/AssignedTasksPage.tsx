@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   TaskRequestError,
@@ -9,7 +9,23 @@ import {
 import { TaskActionModal } from './TaskActionModal'
 import { TaskStatusBadge } from './TaskStatusBadge'
 import { formatDateTime } from './taskLabels'
-import type { CollaboratorTargetStatus, Task } from './types'
+import type { CollaboratorTargetStatus, Task, TaskStatus } from './types'
+
+function SkeletonRows({ columns, rows = 4 }: { columns: number; rows?: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, rowIndex) => (
+        <tr className="skeleton-row" key={rowIndex} aria-hidden="true">
+          {Array.from({ length: columns }).map((__, colIndex) => (
+            <td key={colIndex}>
+              <span className="skeleton skeleton-line" style={{ width: colIndex === 0 ? '70%' : '50%', display: 'block' }} />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  )
+}
 
 const NEXT_STATUS_ACTIONS: Record<string, { label: string; target: CollaboratorTargetStatus }[]> = {
   PENDING: [{ label: 'Iniciar', target: 'IN_PROGRESS' }],
@@ -20,12 +36,24 @@ const NEXT_STATUS_ACTIONS: Record<string, { label: string; target: CollaboratorT
   COMPLETED: [{ label: 'Reabrir', target: 'IN_PROGRESS' }],
 }
 
+const STATUS_FILTERS: { value: TaskStatus | 'ALL'; label: string }[] = [
+  { value: 'ALL', label: 'Todos los estados' },
+  { value: 'PENDING', label: 'Pendientes' },
+  { value: 'IN_PROGRESS', label: 'En curso' },
+  { value: 'DELAYED', label: 'Retrasadas' },
+  { value: 'COMPLETED', label: 'Completadas' },
+  { value: 'CLOSED', label: 'Cerradas' },
+  { value: 'CANCELLED', label: 'Canceladas' },
+]
+
 export function AssignedTasksPage() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [busyTaskId, setBusyTaskId] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<TaskStatus | 'ALL'>('ALL')
 
   const [observationTask, setObservationTask] = useState<Task | null>(null)
 
@@ -68,6 +96,17 @@ export function AssignedTasksPage() {
     setActionMessage('Observacion registrada.')
   }
 
+  const filteredTasks = useMemo(() => {
+    const term = search.trim().toLowerCase()
+    return tasks.filter((task) => {
+      if (statusFilter !== 'ALL' && task.status !== statusFilter) return false
+      if (term && !task.title.toLowerCase().includes(term)) return false
+      return true
+    })
+  }, [tasks, search, statusFilter])
+
+  const hasActiveFilters = search.trim() !== '' || statusFilter !== 'ALL'
+
   return (
     <section className="page">
       <header className="page-header">
@@ -92,6 +131,55 @@ export function AssignedTasksPage() {
           </button>
         </div>
 
+        <div className="filter-bar">
+          <div className="filter-search">
+            <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" />
+            </svg>
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Buscar por título"
+              aria-label="Buscar tareas por título"
+            />
+          </div>
+          <select
+            className="filter-select"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value as TaskStatus | 'ALL')}
+            aria-label="Filtrar por estado"
+          >
+            {STATUS_FILTERS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {hasActiveFilters && (
+          <div className="filter-chips">
+            {search.trim() && (
+              <span className="filter-chip">
+                Búsqueda: {search.trim()}
+                <button type="button" aria-label="Quitar filtro de búsqueda" onClick={() => setSearch('')}>
+                  <svg viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+                </button>
+              </span>
+            )}
+            {statusFilter !== 'ALL' && (
+              <span className="filter-chip">
+                Estado: {STATUS_FILTERS.find((option) => option.value === statusFilter)?.label}
+                <button type="button" aria-label="Quitar filtro de estado" onClick={() => setStatusFilter('ALL')}>
+                  <svg viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+                </button>
+              </span>
+            )}
+            <button type="button" className="filter-clear" onClick={() => { setSearch(''); setStatusFilter('ALL') }}>
+              Limpiar filtros
+            </button>
+          </div>
+        )}
+
         <div className="table-wrapper">
           <table>
             <thead>
@@ -103,13 +191,21 @@ export function AssignedTasksPage() {
               </tr>
             </thead>
             <tbody>
+              {loading ? <SkeletonRows columns={4} /> : null}
+
               {!loading && tasks.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="empty-state">No tienes tareas asignadas.</td>
                 </tr>
               ) : null}
 
-              {tasks.map((task) => (
+              {!loading && tasks.length > 0 && filteredTasks.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="empty-state">Ninguna tarea coincide con los filtros aplicados.</td>
+                </tr>
+              ) : null}
+
+              {!loading && filteredTasks.map((task) => (
                 <tr key={task.id}>
                   <td>
                     <Link to={`/tasks/${task.id}`}>{task.title}</Link>

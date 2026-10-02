@@ -77,6 +77,7 @@ export function CreateTaskPage() {
 
       <article className="panel form-panel">
         <form className="register-user-form" onSubmit={handleSubmit} noValidate>
+          <p className="form-section-title">Información de la tarea</p>
           <div className="task-form-grid">
             <div className="task-form-field full">
               <label htmlFor="task-team">Equipo</label>
@@ -84,7 +85,7 @@ export function CreateTaskPage() {
                 <option value="">Selecciona un equipo que coordinas</option>
                 {teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
               </select>
-              {teams.length === 0 && <p>Necesitas un equipo asignado por el Administrador para crear tareas.</p>}
+              {teams.length === 0 && <p className="field-hint">Necesitas un equipo asignado por el Administrador para crear tareas.</p>}
             </div>
             <div className="task-form-field full">
               <label htmlFor="task-title">Titulo</label>
@@ -111,18 +112,10 @@ export function CreateTaskPage() {
                 disabled={isSubmitting}
               />
             </div>
+          </div>
 
-            <div className="task-form-field">
-              <label htmlFor="task-due-date">Fecha limite</label>
-              <input
-                id="task-due-date"
-                type="datetime-local"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                disabled={isSubmitting}
-              />
-            </div>
-
+          <p className="form-section-title">Asignación y programación</p>
+          <div className="task-form-grid">
             <div className="task-form-field">
               <label htmlFor="task-responsible">Responsable (correo)</label>
               <input
@@ -131,6 +124,17 @@ export function CreateTaskPage() {
                 value={responsibleEmail}
                 onChange={(e) => setResponsibleEmail(e.target.value)}
                 placeholder="colaborador@empresa.com"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="task-form-field">
+              <label htmlFor="task-due-date">Fecha limite</label>
+              <input
+                id="task-due-date"
+                type="datetime-local"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
                 disabled={isSubmitting}
               />
             </div>

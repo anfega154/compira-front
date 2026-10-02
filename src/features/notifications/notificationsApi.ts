@@ -6,6 +6,7 @@ export type TaskNotification = {
   taskTitle: string
   type: 'ASSIGNED' | 'REASSIGNED' | 'DUE_SOON' | 'OVERDUE'
   createdAt: string
+  /** ISO timestamp when the recipient read the notice, or null when unread. */
   readAt: string | null
 }
 
@@ -27,10 +28,12 @@ function parseNotifications(value: unknown): TaskNotification[] {
   return value.map(notification => ({ ...notification, readAt: notification.readAt ?? null }))
 }
 
+/** Marks a single notification as read. Backend: POST /notifications/{id}/read (204, idempotent). */
 export async function markNotificationRead(id: string): Promise<void> {
   await authenticatedRequest(`${BASE}/${encodeURIComponent(id)}/read`, { method: 'POST' })
 }
 
+/** Marks every notification of the current user as read. Backend: POST /notifications/read-all (204, idempotent). */
 export async function markAllNotificationsRead(): Promise<void> {
   await authenticatedRequest(`${BASE}/read-all`, { method: 'POST' })
 }

@@ -1,6 +1,15 @@
 import { authenticatedFetch } from '../auth/authenticatedRequest'
 import type { UserRole } from '../auth/types'
 
+/**
+ * Directory and administration of organization users, backed by the server
+ * endpoints handled by UserAdminHandler (Administrator-only, HU-40 + HU-10):
+ *   - GET  /users                 → list organization users
+ *   - PUT  /users/roles           → update a user's roles
+ *   - POST /users/password-reset  → reset a user's temporary password
+ * The response shape mirrors the backend `UserResponse` record; no fields are
+ * invented.
+ */
 export type OrganizationUser = {
   id: string
   email: string
@@ -49,10 +58,13 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return body as T
 }
 
-export async function getOrganizationUsers(): Promise<OrganizationUser[]> {
-  const response = await authenticatedFetch(usersUrl, { method: 'GET' })
+export async function getUsers(signal?: AbortSignal): Promise<OrganizationUser[]> {
+  const response = await authenticatedFetch(usersUrl, { method: 'GET', signal })
   return handleResponse<OrganizationUser[]>(response)
 }
+
+/** Backward-compatible alias (used by earlier code paths). */
+export const getOrganizationUsers = getUsers
 
 export async function updateUserRoles(payload: UpdateRolesPayload): Promise<OrganizationUser> {
   const response = await authenticatedFetch(`${usersUrl}/roles`, {

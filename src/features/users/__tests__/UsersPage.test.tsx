@@ -150,4 +150,26 @@ describe('UsersPage (HU-40 / HU-10)', () => {
     expect(await screen.findByRole('row', { name: /otro@compira\.co/i })).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
+
+  it('filters users by name or email', async () => {
+    fetchMock.mockResolvedValueOnce(Response.json([
+      buildUser(),
+      buildUser({ id: 'user-2', email: 'maria@compira.co', firstName: 'Maria', lastName: 'Lopez' }),
+    ]))
+    const { user } = renderWithProviders(<UsersPage />)
+
+    await screen.findByRole('row', { name: /collaborator@compira\.co/i })
+    await user.type(screen.getByLabelText('Buscar usuarios por nombre o correo'), 'maria')
+
+    expect(screen.getByRole('row', { name: /maria@compira\.co/i })).toBeInTheDocument()
+    expect(screen.queryByRole('row', { name: /collaborator@compira\.co/i })).not.toBeInTheDocument()
+  })
+
+  it('blocks non-administrators without issuing a request', () => {
+    persistSession(module3User('COORDINATOR'), module3Tokens)
+    renderWithProviders(<UsersPage />)
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Solo el Administrador')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
 })

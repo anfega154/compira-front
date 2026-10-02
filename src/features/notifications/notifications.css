@@ -1,27 +1,288 @@
-.notification-center { position: relative; margin: 0 0 1.5rem auto; width: fit-content; max-width: 100%; }
-.notification-center summary { display: flex; align-items: center; gap: .65rem; cursor: pointer; padding: .65rem 1rem; border: 1px solid rgba(148,163,184,.3); border-radius: .75rem; background: #0f172a; }
-.notification-center summary:focus-visible { outline: 2px solid #38bdf8; outline-offset: 4px; }
-.notification-count { border-radius: 1rem; padding: .1rem .5rem; background: #1e40af; color: #fff; font-size: .8rem; }
-.notification-panel { position: absolute; right: 0; z-index: 10; width: min(25rem, calc(100vw - 3rem)); max-height: 70vh; overflow-y: auto; margin-top: .6rem; padding: 1.25rem; background: #0f172a; border: 1px solid rgba(148,163,184,.3); border-radius: 1rem; box-shadow: 0 1rem 2rem #02061780; }
-.notification-panel h2 { margin: 0; font-size: 1.1rem; }
-.notification-connection, .notification-list time { font-size: .8rem; color: #cbd5e1; }
-.notification-list { list-style: none; padding: 0; margin: 0; }
-.notification-list li { padding: 1rem 0 1rem .75rem; margin: 1rem 0; border-left: 3px solid #38bdf8; border-bottom: 1px solid #334155; overflow-wrap: anywhere; }
-.notification-list p { margin: .4rem 0; }
-.notification-list .notification-overdue { border-left-color: #fb923c; }
-.notification-list .notification-due_soon { border-left-color: #facc15; }
-.organization-settings select { width: 100%; }
-.organization-settings .notification-toggle { display: flex; align-items: center; gap: .75rem; }
-.organization-settings .notification-toggle input { width: 1.1rem; height: 1.1rem; margin: 0; accent-color: #0e7490; }
-.notification-count { background: #dc2626; }
-.notification-panel-header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .25rem; }
-.notification-mark-all { border: 1px solid rgba(56,189,248,.4); border-radius: .6rem; padding: .3rem .6rem; font: inherit; font-size: .78rem; background: rgba(56,189,248,.12); color: #7dd3fc; cursor: pointer; }
-.notification-mark-all:hover { background: rgba(56,189,248,.2); }
-.notification-mark-all:focus-visible { outline: 2px solid #38bdf8; outline-offset: 2px; }
-.notification-meta { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
-.notification-mark-read { border: none; background: none; padding: 0; font: inherit; font-size: .78rem; color: #7dd3fc; cursor: pointer; text-decoration: underline; }
-.notification-mark-read:hover { color: #bae6fd; }
-.notification-mark-read:focus-visible { outline: 2px solid #38bdf8; outline-offset: 2px; border-radius: .25rem; }
-.notification-list li.notification-unread strong::before { content: ""; display: inline-block; width: .5rem; height: .5rem; margin-right: .5rem; border-radius: 50%; background: #38bdf8; vertical-align: middle; }
-.notification-list li.notification-read { opacity: .6; border-left-color: #475569; }
-.notification-list li.notification-read strong { font-weight: 500; color: #cbd5e1; }
+/* ==========================================================================
+   M3 — Notification center (activity-feed dropdown, lives in the top bar)
+   ========================================================================== */
+.notification-center {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.notification-center summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.5rem 0.85rem;
+  min-height: var(--control-height);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: var(--fs-label);
+  font-weight: var(--fw-medium);
+  list-style: none;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.notification-center summary::-webkit-details-marker {
+  display: none;
+}
+
+.notification-center summary:hover {
+  background: var(--surface-hover);
+  border-color: var(--info-border);
+  color: var(--text-strong);
+}
+
+.notification-center summary:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 3px;
+}
+
+.notification-center summary svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+}
+
+.notification-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 0.35rem;
+  border-radius: var(--radius-pill);
+  background: var(--danger);
+  color: #fff;
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-bold);
+}
+
+.notification-panel {
+  position: absolute;
+  right: 0;
+  z-index: var(--z-dropdown);
+  width: min(26rem, calc(100vw - 2rem));
+  max-height: 72vh;
+  overflow-y: auto;
+  margin-top: 0.6rem;
+  padding: var(--space-4);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-interactive);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.notification-panel h2 {
+  margin: 0;
+  font-size: var(--fs-card-title);
+  font-weight: var(--fw-semibold);
+  color: var(--text-strong);
+}
+
+.notification-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.notification-mark-all {
+  border: none;
+  background: none;
+  color: var(--text-accent);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: var(--space-1) 0;
+  flex-shrink: 0;
+}
+
+.notification-mark-all:hover {
+  color: var(--brand-cyan-soft);
+}
+
+.notification-mark-all:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.notification-connection {
+  font-size: var(--fs-meta);
+  color: var(--text-muted);
+}
+
+.notification-panel > .secondary-button,
+.notification-panel > a {
+  align-self: flex-start;
+}
+
+.notification-panel > a {
+  color: var(--text-accent);
+  font-size: var(--fs-label);
+  font-weight: var(--fw-medium);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.notification-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.notification-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--info);
+  background: var(--surface-1);
+  margin-bottom: var(--space-2);
+  overflow-wrap: anywhere;
+  transition: background var(--transition-fast);
+}
+
+.notification-list li:hover {
+  background: var(--surface-hover);
+}
+
+.notification-list li:last-child {
+  margin-bottom: 0;
+}
+
+.notification-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: var(--info-surface);
+  color: var(--info-soft);
+}
+
+.notification-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.notification-body {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notification-body strong {
+  font-size: var(--fs-label);
+  font-weight: var(--fw-semibold);
+  color: var(--text-strong);
+}
+
+.notification-list p {
+  margin: 0;
+  font-size: var(--fs-label);
+  color: var(--text-secondary);
+}
+
+.notification-list time {
+  font-size: var(--fs-meta);
+  color: var(--text-muted);
+}
+
+/* Per-item footer: timestamp + "Marcar leída" action */
+.notification-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.notification-mark-read {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--fs-meta);
+  color: var(--text-accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  flex-shrink: 0;
+}
+
+.notification-mark-read:hover {
+  color: var(--brand-cyan-soft);
+}
+
+.notification-mark-read:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* Read vs unread distinction */
+.notification-list li.notification-read {
+  opacity: 0.6;
+  border-left-color: var(--border-interactive);
+}
+
+.notification-list li.notification-read strong {
+  font-weight: var(--fw-medium);
+  color: var(--text-secondary);
+}
+
+/* Type-based accents (color is paired with distinct icons for a11y) */
+.notification-list .notification-assigned {
+  border-left-color: var(--success);
+}
+.notification-list .notification-assigned .notification-icon {
+  background: var(--success-surface);
+  color: var(--success-soft);
+}
+
+.notification-list .notification-reassigned {
+  border-left-color: var(--brand-cyan);
+}
+
+.notification-list .notification-due_soon {
+  border-left-color: var(--warning);
+}
+.notification-list .notification-due_soon .notification-icon {
+  background: var(--warning-surface);
+  color: var(--warning-soft);
+}
+
+.notification-list .notification-overdue {
+  border-left-color: var(--danger);
+}
+.notification-list .notification-overdue .notification-icon {
+  background: var(--danger-surface);
+  color: var(--danger-soft);
+}
+
+/* read state overrides type accent so a read item always looks muted */
+.notification-list li.notification-read {
+  border-left-color: var(--border-interactive);
+}
+
+@media (max-width: 640px) {
+  .notification-panel {
+    position: fixed;
+    right: var(--space-4);
+    left: var(--space-4);
+    width: auto;
+  }
+}

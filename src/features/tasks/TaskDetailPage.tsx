@@ -9,9 +9,13 @@ import {
 import { TaskStatusBadge } from './TaskStatusBadge'
 import { TASK_EVENT_LABELS, formatDateTime } from './taskLabels'
 import type { Task, TaskHistoryEntry, TaskObservation } from './types'
+import { useAuth } from '../auth/useAuth'
 
 export function TaskDetailPage() {
   const { taskId } = useParams<{ taskId: string }>()
+  const { user } = useAuth()
+  const isManager = user?.roles.some((role) => role === 'ADMINISTRATOR' || role === 'COORDINATOR') ?? false
+  const backPath = isManager ? '/tasks' : '/tasks/assigned'
   const [task, setTask] = useState<Task | null>(null)
   const [observations, setObservations] = useState<TaskObservation[]>([])
   const [history, setHistory] = useState<TaskHistoryEntry[]>([])
@@ -46,6 +50,10 @@ export function TaskDetailPage() {
     return (
       <section className="page">
         <p className="page-copy">Cargando tarea...</p>
+        <article className="panel">
+          <div className="skeleton skeleton-line" style={{ width: '40%', height: 18 }} />
+          <div className="skeleton skeleton-line" style={{ width: '100%', height: 120, marginTop: 16 }} />
+        </article>
       </section>
     )
   }
@@ -54,7 +62,7 @@ export function TaskDetailPage() {
     return (
       <section className="page">
         <div className="feedback error" role="alert">{error ?? 'No se encontro la tarea.'}</div>
-        <Link to="/tasks" className="secondary-button" style={{ alignSelf: 'flex-start' }}>
+        <Link to={backPath} className="secondary-button" style={{ alignSelf: 'flex-start' }}>
           Volver a tareas
         </Link>
       </section>
@@ -77,16 +85,26 @@ export function TaskDetailPage() {
           <div className="panel-header">
             <div><h3>Informacion</h3></div>
           </div>
-          <dl>
-            <div className="metric-card" style={{ marginBottom: '1rem' }}>
-              <span>Fecha limite</span>
-              <strong style={{ fontSize: '1.1rem' }}>{formatDateTime(task.dueDate)}</strong>
+          <dl className="detail-info-list">
+            <div className="detail-info-item">
+              <span className="detail-label">Fecha limite</span>
+              <span className="detail-value">{formatDateTime(task.dueDate)}</span>
             </div>
-            <p className="page-copy">Creada: {formatDateTime(task.createdAt)}</p>
-            <p className="page-copy">Ultima actualizacion: {formatDateTime(task.updatedAt)}</p>
+            <div className="detail-info-item">
+              <span className="detail-label">Estado</span>
+              <span className="detail-value"><TaskStatusBadge status={task.status} /></span>
+            </div>
+            <div className="detail-info-item">
+              <span className="detail-label">Creada</span>
+              <span className="detail-value">{formatDateTime(task.createdAt)}</span>
+            </div>
+            <div className="detail-info-item">
+              <span className="detail-label">Ultima actualizacion</span>
+              <span className="detail-value">{formatDateTime(task.updatedAt)}</span>
+            </div>
           </dl>
 
-          <h3 style={{ marginTop: '1.5rem' }}>Observaciones</h3>
+          <h3 style={{ marginTop: 'var(--space-5)', marginBottom: 'var(--space-4)' }}>Observaciones</h3>
           {observations.length === 0 ? (
             <p className="page-copy">No hay observaciones registradas.</p>
           ) : (
@@ -121,7 +139,7 @@ export function TaskDetailPage() {
         </article>
       </div>
 
-      <Link to="/tasks" className="secondary-button" style={{ alignSelf: 'flex-start' }}>
+      <Link to={backPath} className="secondary-button" style={{ alignSelf: 'flex-start' }}>
         Volver a tareas
       </Link>
     </section>

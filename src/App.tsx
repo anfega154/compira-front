@@ -13,6 +13,7 @@ import { useAuth } from './features/auth/useAuth'
 import { canViewTaskBoard } from './features/auth/permissions'
 import { AssignedTasksPage } from './features/tasks/AssignedTasksPage'
 import { CreateTaskPage } from './features/tasks/CreateTaskPage'
+import { DashboardPage } from './features/dashboard/DashboardPage'
 import { ReportsPage } from './features/tasks/ReportsPage'
 import { TaskDetailPage } from './features/tasks/TaskDetailPage'
 import { TasksPage } from './features/tasks/TasksPage'
@@ -45,6 +46,7 @@ function App() {
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['ADMINISTRATOR', 'COORDINATOR']} />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/tasks" element={<TasksPage />} />
             <Route path="/teams" element={<TeamsPage />} />
             <Route path="/reports" element={<ReportsPage />} />

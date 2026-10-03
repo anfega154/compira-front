@@ -7,6 +7,7 @@ import type { UserRole } from '../auth/types'
  *   - GET  /users                 → list organization users
  *   - PUT  /users/roles           → update a user's roles
  *   - POST /users/password-reset  → reset a user's temporary password
+ *   - POST /users/status          → activate/deactivate a user (logical, DEC-019)
  * The response shape mirrors the backend `UserResponse` record; no fields are
  * invented.
  */
@@ -32,6 +33,11 @@ export type UpdateRolesPayload = {
 export type ResetPasswordPayload = {
   email: string
   temporaryPassword: string
+}
+
+export type SetUserStatusPayload = {
+  email: string
+  active: boolean
 }
 
 export class UserRequestError extends Error {
@@ -80,4 +86,12 @@ export async function resetUserPassword(payload: ResetPasswordPayload): Promise<
     body: JSON.stringify(payload),
   })
   return handleResponse<void>(response)
+}
+
+export async function setUserStatus(payload: SetUserStatusPayload): Promise<OrganizationUser> {
+  const response = await authenticatedFetch(`${usersUrl}/status`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return handleResponse<OrganizationUser>(response)
 }

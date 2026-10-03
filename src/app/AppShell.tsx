@@ -28,7 +28,6 @@ const PAGE_CONTEXT: { match: (path: string) => boolean; eyebrow: string; title: 
   { match: (p) => p === '/reports', eyebrow: 'Administración', title: 'Reportes' },
   { match: (p) => p === '/users', eyebrow: 'Administración', title: 'Usuarios' },
   { match: (p) => p === '/users/register', eyebrow: 'Administración', title: 'Registrar usuario' },
-  { match: (p) => p === '/users/delete', eyebrow: 'Administración', title: 'Eliminar usuario' },
   { match: (p) => p === '/teams', eyebrow: 'Administración', title: 'Equipos' },
   { match: (p) => p === '/organization/settings', eyebrow: 'Administración', title: 'Configuración' },
 ]

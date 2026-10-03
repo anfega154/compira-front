@@ -7,6 +7,7 @@ import {
   UserRequestError,
   getUsers,
   resetUserPassword,
+  setUserStatus,
   updateUserRoles,
 } from './usersApi'
 import type { OrganizationUser } from './usersApi'
@@ -49,6 +50,7 @@ export function UsersPage() {
 }
 
 function UsersDirectory() {
+  const { user: sessionUser } = useAuth()
   const headingRef = useRef<HTMLHeadingElement>(null)
   const [users, setUsers] = useState<OrganizationUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -209,6 +211,7 @@ function UsersDirectory() {
         <EditUserPanel
           key={selectedUser.id}
           user={selectedUser}
+          isSelf={sessionUser?.email === selectedUser.email}
           onUserUpdated={handleUserUpdated}
           onClose={() => setSelectedEmail(null)}
         />
@@ -219,11 +222,12 @@ function UsersDirectory() {
 
 type EditUserPanelProps = {
   user: OrganizationUser
+  isSelf: boolean
   onUserUpdated: (user: OrganizationUser) => void
   onClose: () => void
 }
 
-function EditUserPanel({ user, onUserUpdated, onClose }: EditUserPanelProps) {
+function EditUserPanel({ user, isSelf, onUserUpdated, onClose }: EditUserPanelProps) {
   const [roles, setRoles] = useState<UserRole[]>(user.roles)
   const [isSavingRoles, setIsSavingRoles] = useState(false)
   const [rolesMessage, setRolesMessage] = useState<string | null>(null)
@@ -233,6 +237,27 @@ function EditUserPanel({ user, onUserUpdated, onClose }: EditUserPanelProps) {
   const [isResetting, setIsResetting] = useState(false)
   const [resetMessage, setResetMessage] = useState<string | null>(null)
   const [resetError, setResetError] = useState<string | null>(null)
+
+  const isActive = user.status === 'ACTIVE'
+  const [isChangingStatus, setIsChangingStatus] = useState(false)
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const [statusError, setStatusError] = useState<string | null>(null)
+
+  async function handleStatusToggle() {
+    if (isChangingStatus || isSelf) return
+    setIsChangingStatus(true)
+    setStatusMessage(null)
+    setStatusError(null)
+    try {
+      const updated = await setUserStatus({ email: user.email, active: !isActive })
+      onUserUpdated(updated)
+      setStatusMessage(updated.status === 'ACTIVE' ? 'Usuario activado.' : 'Usuario inactivado.')
+    } catch (error) {
+      setStatusError(error instanceof UserRequestError ? error.message : 'No se pudo cambiar el estado del usuario.')
+    } finally {
+      setIsChangingStatus(false)
+    }
+  }
 
   function toggleRole(role: UserRole) {
     setRolesMessage(null)
@@ -281,7 +306,7 @@ function EditUserPanel({ user, onUserUpdated, onClose }: EditUserPanelProps) {
 
   const canReset = temporaryPassword.length >= PASSWORD_MIN_LENGTH && !isResetting
 
-  const isBusy = isSavingRoles || isResetting
+  const isBusy = isSavingRoles || isResetting || isChangingStatus
 
   return (
     <Modal
@@ -333,6 +358,34 @@ function EditUserPanel({ user, onUserUpdated, onClose }: EditUserPanelProps) {
           {resetMessage ? <p className="feedback success" role="status">{resetMessage}</p> : null}
           {resetError ? <p className="feedback error" role="alert">{resetError}</p> : null}
         </form>
+
+        <section className="register-user-form">
+          <div className="task-form-field">
+            <span className="form-section-title">Estado de la cuenta</span>
+            <span className="field-hint">
+              {isActive
+                ? 'La cuenta está activa. Al inactivarla, el usuario perderá el acceso hasta que se reactive.'
+                : 'La cuenta está inactiva. Al activarla, el usuario recuperará el acceso.'}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => void handleStatusToggle()}
+            disabled={isChangingStatus || isSelf}
+          >
+            {isChangingStatus
+              ? 'Actualizando…'
+              : isActive
+                ? 'Inactivar usuario'
+                : 'Activar usuario'}
+          </button>
+          {isSelf ? (
+            <p className="field-hint" role="note">No puedes inactivar tu propia cuenta.</p>
+          ) : null}
+          {statusMessage ? <p className="feedback success" role="status">{statusMessage}</p> : null}
+          {statusError ? <p className="feedback error" role="alert">{statusError}</p> : null}
+        </section>
 
         <footer className="app-modal-actions">
           <button type="button" className="secondary-button" onClick={onClose} disabled={isBusy}>Cerrar edición</button>

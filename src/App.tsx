@@ -17,7 +17,6 @@ import { DashboardPage } from './features/dashboard/DashboardPage'
 import { ReportsPage } from './features/tasks/ReportsPage'
 import { TaskDetailPage } from './features/tasks/TaskDetailPage'
 import { TasksPage } from './features/tasks/TasksPage'
-import { DeleteUserPage } from './features/users/DeleteUserPage'
 import { RegisterUserPage } from './features/users/RegisterUserPage'
 import { UsersPage } from './features/users/UsersPage'
 
@@ -59,7 +58,6 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['ADMINISTRATOR']} />}>
             <Route path="/users" element={<UsersPage />} />
             <Route path="/users/register" element={<RegisterUserPage />} />
-            <Route path="/users/delete" element={<DeleteUserPage />} />
             <Route path="/organization/settings" element={<OrganizationSettingsPage />} />
           </Route>
         </Route>

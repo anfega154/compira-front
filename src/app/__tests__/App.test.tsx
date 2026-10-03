@@ -71,21 +71,18 @@ describe('User management permissions', () => {
 
   it.each([
     { role: 'COORDINATOR', path: '/users/register' },
-    { role: 'COORDINATOR', path: '/users/delete' },
     { role: 'COLLABORATOR', path: '/users/register' },
-    { role: 'COLLABORATOR', path: '/users/delete' },
   ] satisfies { role: UserRole; path: string }[])('blocks $role opening $path directly', async ({ role, path }) => {
     persistSession({ ...module3User(), roles: [role] }, module3Tokens)
     renderWithProviders(<App />, { initialEntries: [path] })
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No tienes permisos para acceder a esta página.')
-    expect(screen.queryByRole('button', { name: /Crear usuario|Eliminar usuario/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Crear usuario/ })).not.toBeInTheDocument()
     expect(fetchMock.mock.calls.some(([url]) => /\/auth\/(register|users)/.test(String(url)))).toBe(false)
   })
 
   it.each([
     { path: '/users/register', action: 'Crear usuario' },
-    { path: '/users/delete', action: 'Eliminar usuario' },
   ])('allows administrators to open $path', async ({ path, action }) => {
     persistSession({ ...module3User(), roles: ['ADMINISTRATOR'] }, module3Tokens)
     renderWithProviders(<App />, { initialEntries: [path] })

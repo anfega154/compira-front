@@ -1895,3 +1895,40 @@ table caption {
 .task-filters > button {
   margin-left: auto;
 }
+
+/* ==========================================================================
+   Reportes: barras por tono + encabezados de tabla ordenables
+   ========================================================================== */
+.bar-fill.tone-success { background: linear-gradient(90deg, var(--brand-emerald-strong), var(--success-soft)); }
+.bar-fill.tone-warning { background: linear-gradient(90deg, #b45309, var(--warning)); }
+.bar-fill.tone-danger  { background: linear-gradient(90deg, var(--danger-solid), var(--danger-soft)); }
+.bar-fill.tone-info    { background: linear-gradient(90deg, var(--brand-teal-strong), var(--brand-cyan)); }
+.bar-fill.tone-neutral { background: linear-gradient(90deg, #475569, #94a3b8); }
+
+.sortable-header {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: var(--fw-semibold);
+  color: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sortable-header:hover { color: var(--text-accent); }
+.sortable-header:focus-visible { outline: none; box-shadow: var(--ring-focus); border-radius: var(--radius-xs); }
+
+.sort-indicator {
+  font-size: 0.7em;
+  opacity: 0.6;
+  transition: opacity var(--transition-fast);
+}
+
+.sortable-header:hover .sort-indicator { opacity: 1; }
+th[aria-sort="ascending"] .sort-indicator,
+th[aria-sort="descending"] .sort-indicator { opacity: 1; color: var(--text-accent); }

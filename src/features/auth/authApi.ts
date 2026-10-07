@@ -4,7 +4,6 @@ import type {
   AuthApiError,
   AuthResponse,
   ChallengeRequest,
-  DeleteUserRequest,
   LoginRequest,
   LogoutRequest,
   PasswordRecoveryConfirmRequest,
@@ -119,13 +118,3 @@ export async function registerUser(
   return handleResponse<RegisterUserResponse>(response)
 }
 
-export async function deleteUser(
-  payload: DeleteUserRequest,
-): Promise<void> {
-  const response = await authenticatedFetch('/auth/users', {
-    method: 'DELETE',
-    body: JSON.stringify(payload),
-  })
-
-  return handleResponse<void>(response)
-}

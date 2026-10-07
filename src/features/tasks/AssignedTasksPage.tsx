@@ -33,6 +33,10 @@ const NEXT_STATUS_ACTIONS: Record<string, { label: string; target: CollaboratorT
     { label: 'Completar', target: 'COMPLETED' },
     { label: 'Volver a pendiente', target: 'PENDING' },
   ],
+  DELAYED: [
+    { label: 'Iniciar', target: 'IN_PROGRESS' },
+    { label: 'Completar', target: 'COMPLETED' },
+  ],
   COMPLETED: [{ label: 'Reabrir', target: 'IN_PROGRESS' }],
 }
 

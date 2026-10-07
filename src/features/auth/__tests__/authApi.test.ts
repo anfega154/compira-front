@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   AuthRequestError,
   confirmPasswordRecovery,
-  deleteUser,
   login,
   logout,
   registerUser,
@@ -215,31 +214,6 @@ describe('authApi', () => {
       await expect(
         registerUser({ email: 'dup@test.com', password: 'x', firstName: 'A', lastName: 'B', phoneNumber: '+571', preferredMfaChannel: 'EMAIL' }),
       ).rejects.toThrow('Ya existe una cuenta registrada')
-    })
-  })
-
-  describe('deleteUser', () => {
-    it('sends DELETE request with email and auth header', async () => {
-      mockFetch.mockReturnValueOnce(noContentResponse())
-
-      await expect(deleteUser({ email: 'del@test.com' })).resolves.toBeUndefined()
-      expect(new Headers(mockFetch.mock.calls[0][1].headers).get('Authorization')).toBe('Bearer admin-token')
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/auth/users'),
-        expect.objectContaining({
-          method: 'DELETE',
-          headers: expect.any(Headers),
-          body: JSON.stringify({ email: 'del@test.com' }),
-        }),
-      )
-    })
-
-    it('throws on user not found', async () => {
-      const errorBody = { code: 'AUTH_007', message: 'No se encontro una cuenta asociada al usuario enviado', category: 'NOT_FOUND' }
-      mockFetch.mockReturnValueOnce(jsonResponse(errorBody, 404))
-
-      await expect(deleteUser({ email: 'nobody@test.com' })).rejects.toThrow('No se encontro')
     })
   })
 })

@@ -104,6 +104,22 @@ describe('AssignedTasksPage', () => {
     expect(within(row).getByText('Retrasada')).toBeInTheDocument()
     expect(within(row).getByRole('button', { name: 'Iniciar' })).toBeInTheDocument()
   })
+
+  it('offers start and complete actions on a task persisted as DELAYED', async () => {
+    mockGetAssigned.mockResolvedValue([buildTask({ status: 'DELAYED', overdue: true, dueDate: '2026-09-01T00:00:00Z' })])
+    mockUpdateStatus.mockResolvedValueOnce(buildTask({ status: 'IN_PROGRESS' }))
+
+    const { user } = renderWithProviders(<AssignedTasksPage />)
+
+    const row = await screen.findByRole('row', { name: /Preparar informe/i })
+    // El estado "Retrasada" se muestra una sola vez (sin chip duplicado).
+    expect(within(row).getAllByText('Retrasada')).toHaveLength(1)
+    expect(within(row).getByRole('button', { name: 'Iniciar' })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Completar' })).toBeInTheDocument()
+
+    await user.click(within(row).getByRole('button', { name: 'Iniciar' }))
+    await waitFor(() => expect(mockUpdateStatus).toHaveBeenCalledWith('t1', { status: 'IN_PROGRESS' }))
+  })
 })
 
 

@@ -7,7 +7,7 @@ type TaskStatusBadgeProps = {
 }
 
 export function TaskStatusBadge({ status, overdue = false }: TaskStatusBadgeProps) {
-  const showOverdue = overdue && status !== 'CLOSED' && status !== 'CANCELLED' && status !== 'COMPLETED'
+  const showOverdue = overdue && status !== 'CLOSED' && status !== 'CANCELLED' && status !== 'COMPLETED' && status !== 'DELAYED'
   return (
     <span className="task-status-badges">
       <span className={`task-status-badge ${TASK_STATUS_TONE[status]}`}>

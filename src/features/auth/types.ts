@@ -142,7 +142,3 @@ export type RegisterUserResponse = {
   userConfirmed: boolean
   codeDeliveryDetails: CodeDeliveryDetails
 }
-
-export type DeleteUserRequest = {
-  email: string
-}

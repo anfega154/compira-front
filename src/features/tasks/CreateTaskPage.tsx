@@ -128,10 +128,9 @@ export function CreateTaskPage() {
   }
 
   return (
-    <section className="page">
+    <section className="page create-task-page">
       <header className="page-header">
         <div>
-          <p className="eyebrow">Gestion de tareas</p>
           <h2>Crear tarea</h2>
           <p className="page-copy">
             Define una nueva tarea con su información básica y asígnala a un colaborador.
@@ -142,13 +141,13 @@ export function CreateTaskPage() {
         </button>
       </header>
 
-      <article className="panel form-panel">
+      <article className="panel form-panel narrow">
         <form className="register-user-form" onSubmit={handleSubmit} noValidate>
           <p className="form-section-title">Información de la tarea</p>
-          <div className="task-form-grid">
+          <div className="task-form-grid single">
             <div className="task-form-field full">
               <label htmlFor="task-team">Equipo</label>
-              <select id="task-team" value={teamId} required disabled={isSubmitting} onChange={event => {
+              <select id="task-team" className={teamId === '' ? 'is-placeholder' : undefined} value={teamId} required disabled={isSubmitting} onChange={event => {
                 setTeamId(event.target.value)
                 setResponsibleEmail('')
               }}>
@@ -191,7 +190,7 @@ export function CreateTaskPage() {
           </div>
 
           <p className="form-section-title">Asignación y programación</p>
-          <div className="task-form-grid">
+          <div className="task-form-grid single">
             <div className="task-form-field">
               <label htmlFor="task-responsible">Responsable (opcional)</label>
               <ResponsibleCombobox

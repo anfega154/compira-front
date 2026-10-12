@@ -191,6 +191,44 @@ describe('CreateTaskPage', () => {
       expect(screen.getByLabelText('Titulo')).toHaveAttribute('maxLength', '150')
     })
 
+    /**
+     * Case: the user pastes a title longer than 150 characters.
+     * Expected: the field truncates the text to the 150-character maximum.
+     * Result: the title value has exactly 150 characters.
+     */
+    it('truncates a title longer than 150 characters', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await user.click(screen.getByLabelText('Titulo'))
+      await user.paste('a'.repeat(151))
+
+      expect(screen.getByLabelText('Titulo')).toHaveValue('a'.repeat(150))
+    })
+
+    /**
+     * Case: the description limit is checked (the component defines 2000; the HU asks for 150).
+     * Expected: the description has a character limit.
+     * Result: the textarea has maxLength = 2000 (current behavior, differs from the HU).
+     */
+    it('limits the description to 2000 characters (current component behavior)', () => {
+      renderWithProviders(<CreateTaskPage />)
+      expect(screen.getByLabelText('Descripcion')).toHaveAttribute('maxLength', '2000')
+    })
+
+    /**
+     * Case: the user pastes a description longer than 2000 characters.
+     * Expected: the field does not accept more than its limit.
+     * Result: the description value is truncated to exactly 2000 characters.
+     */
+    it('truncates a description longer than 2000 characters', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await user.click(screen.getByLabelText('Descripcion'))
+      await user.paste('b'.repeat(2001))
+
+      expect(screen.getByLabelText('Descripcion')).toHaveValue('b'.repeat(2000))
+    })
+
     // Pending in the component: canSubmit currently only requires team and title.
     it.todo('disables submit when the description is empty')
     it.todo('disables submit when the due date is empty')

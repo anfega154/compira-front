@@ -144,7 +144,7 @@ describe('HU-12 · Create task: access permissions (E8)', () => {
     renderWithProviders(<App />, { initialEntries: ['/tasks/create'] })
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No tienes permisos para acceder a esta página.')
-    expect(screen.queryByLabelText('Titulo')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Título')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Crear tarea' })).not.toBeInTheDocument()
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/teams'))).toBe(false)
   })
@@ -152,7 +152,7 @@ describe('HU-12 · Create task: access permissions (E8)', () => {
   /**
    * Case: a coordinator opens /tasks/create.
    * Expected: the creation form is available.
-   * Result: the Titulo field and the "Crear tarea" button are shown.
+   * Result: the Título field and the "Crear tarea" button are shown.
    */
   it('allows a coordinator to open /tasks/create', async () => {
     fetchMock.mockImplementation((url: string, options?: RequestInit) => {
@@ -163,7 +163,7 @@ describe('HU-12 · Create task: access permissions (E8)', () => {
     persistSession({ ...module3User(), roles: ['COORDINATOR'] }, module3Tokens)
     renderWithProviders(<App />, { initialEntries: ['/tasks/create'] })
 
-    expect(await screen.findByLabelText('Titulo')).toBeVisible()
+    expect(await screen.findByLabelText('Título')).toBeVisible()
     expect(screen.getByRole('button', { name: 'Crear tarea' })).toBeVisible()
   })
 })

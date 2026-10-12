@@ -74,12 +74,12 @@ describe('CreateTaskPage', () => {
   /**
    * Case: the coordinator opens the "Crear tarea" screen.
    * Expected: the form fields and the submit button are shown.
-   * Result: the Titulo and Descripcion fields and the "Crear tarea" button exist.
+   * Result: the Título and Descripción fields and the "Crear tarea" button exist.
    */
   it('renders the create task form', () => {
     renderWithProviders(<CreateTaskPage />)
-    expect(screen.getByLabelText('Titulo')).toBeInTheDocument()
-    expect(screen.getByLabelText('Descripcion')).toBeInTheDocument()
+    expect(screen.getByLabelText('Título')).toBeInTheDocument()
+    expect(screen.getByLabelText('Descripción')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /crear tarea/i })).toBeInTheDocument()
   })
 
@@ -104,9 +104,9 @@ describe('CreateTaskPage', () => {
       const { user } = renderWithProviders(<CreateTaskPage />)
 
       await selectTeam(user)
-      await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
-      await user.type(screen.getByLabelText('Descripcion'), 'Informe mensual')
-      fireEvent.change(screen.getByLabelText('Fecha limite'), { target: { value: '2099-12-31T10:00' } })
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+      await user.type(screen.getByLabelText('Descripción'), 'Informe mensual')
+      fireEvent.change(screen.getByLabelText('Fecha límite'), { target: { value: '2099-12-31T10:00' } })
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
       expect(mockCreateTask).toHaveBeenCalledWith({
@@ -117,9 +117,9 @@ describe('CreateTaskPage', () => {
         responsibleEmail: undefined,
       })
       expect(await screen.findByRole('status')).toHaveTextContent('Tarea "Preparar informe" creada correctamente.')
-      expect(screen.getByLabelText('Titulo')).toHaveValue('')
-      expect(screen.getByLabelText('Descripcion')).toHaveValue('')
-      expect(screen.getByLabelText('Fecha limite')).toHaveValue('')
+      expect(screen.getByLabelText('Título')).toHaveValue('')
+      expect(screen.getByLabelText('Descripción')).toHaveValue('')
+      expect(screen.getByLabelText('Fecha límite')).toHaveValue('')
       expect(screen.getByLabelText('Responsable (opcional)')).toHaveValue('')
     })
 
@@ -133,7 +133,7 @@ describe('CreateTaskPage', () => {
       const { user } = renderWithProviders(<CreateTaskPage />)
 
       await selectTeam(user)
-      await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
       expect(mockCreateTask).toHaveBeenCalled()
@@ -152,7 +152,7 @@ describe('CreateTaskPage', () => {
       const { user } = renderWithProviders(<CreateTaskPage />)
 
       await selectTeam(user)
-      await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
       await selectResponsible(user, /Ana García/)
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
@@ -171,7 +171,7 @@ describe('CreateTaskPage', () => {
       const { user } = renderWithProviders(<CreateTaskPage />)
 
       await screen.findByRole('option', { name: 'Operaciones' })
-      await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
 
       expect(screen.getByRole('button', { name: /crear tarea/i })).toBeDisabled()
       expect(mockCreateTask).not.toHaveBeenCalled()
@@ -186,7 +186,7 @@ describe('CreateTaskPage', () => {
       const { user } = renderWithProviders(<CreateTaskPage />)
 
       await selectTeam(user)
-      await user.type(screen.getByLabelText('Titulo'), '   ')
+      await user.type(screen.getByLabelText('Título'), '   ')
 
       expect(screen.getByRole('button', { name: /crear tarea/i })).toBeDisabled()
       expect(mockCreateTask).not.toHaveBeenCalled()
@@ -199,7 +199,7 @@ describe('CreateTaskPage', () => {
      */
     it('limits the title to 150 characters', () => {
       renderWithProviders(<CreateTaskPage />)
-      expect(screen.getByLabelText('Titulo')).toHaveAttribute('maxLength', '150')
+      expect(screen.getByLabelText('Título')).toHaveAttribute('maxLength', '150')
     })
 
     /**
@@ -210,10 +210,10 @@ describe('CreateTaskPage', () => {
     it('truncates a title longer than 150 characters', async () => {
       const { user } = renderWithProviders(<CreateTaskPage />)
 
-      await user.click(screen.getByLabelText('Titulo'))
+      await user.click(screen.getByLabelText('Título'))
       await user.paste('a'.repeat(151))
 
-      expect(screen.getByLabelText('Titulo')).toHaveValue('a'.repeat(150))
+      expect(screen.getByLabelText('Título')).toHaveValue('a'.repeat(150))
     })
 
     /**
@@ -223,7 +223,7 @@ describe('CreateTaskPage', () => {
      */
     it('limits the description to 2000 characters (current component behavior)', () => {
       renderWithProviders(<CreateTaskPage />)
-      expect(screen.getByLabelText('Descripcion')).toHaveAttribute('maxLength', '2000')
+      expect(screen.getByLabelText('Descripción')).toHaveAttribute('maxLength', '2000')
     })
 
     /**
@@ -234,10 +234,10 @@ describe('CreateTaskPage', () => {
     it('truncates a description longer than 2000 characters', async () => {
       const { user } = renderWithProviders(<CreateTaskPage />)
 
-      await user.click(screen.getByLabelText('Descripcion'))
+      await user.click(screen.getByLabelText('Descripción'))
       await user.paste('b'.repeat(2001))
 
-      expect(screen.getByLabelText('Descripcion')).toHaveValue('b'.repeat(2000))
+      expect(screen.getByLabelText('Descripción')).toHaveValue('b'.repeat(2000))
     })
 
     // Pending in the component: canSubmit currently only requires team and title.
@@ -268,7 +268,7 @@ describe('CreateTaskPage', () => {
       const { user } = renderWithProviders(<CreateTaskPage />)
 
       await selectTeam(user)
-      await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
       await selectResponsible(user, /Luis Pérez/)
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
@@ -288,7 +288,7 @@ describe('CreateTaskPage', () => {
       const { user } = renderWithProviders(<CreateTaskPage />)
 
       await selectTeam(user)
-      await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
       expect(await screen.findByRole('alert')).toHaveTextContent('Solo un coordinador')
@@ -297,17 +297,17 @@ describe('CreateTaskPage', () => {
     /**
      * Case: unhandled error (not a TaskRequestError).
      * Expected: generic message to retry.
-     * Result: the alert shows "Ocurrio un error inesperado. Intenta nuevamente."
+     * Result: the alert shows "Ocurrió un error inesperado. Intenta nuevamente."
      */
     it('shows a generic message for unexpected errors', async () => {
       mockCreateTask.mockRejectedValueOnce(new Error('boom'))
       const { user } = renderWithProviders(<CreateTaskPage />)
 
       await selectTeam(user)
-      await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
-      expect(await screen.findByRole('alert')).toHaveTextContent('Ocurrio un error inesperado. Intenta nuevamente.')
+      expect(await screen.findByRole('alert')).toHaveTextContent('Ocurrió un error inesperado. Intenta nuevamente.')
     })
   })
 
@@ -373,7 +373,7 @@ describe('CreateTaskPage', () => {
       const { user } = renderWithProviders(<CreateTaskPage />)
 
       await selectTeam(user)
-      await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
       await selectResponsible(user, /Ana García/)
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
@@ -396,7 +396,7 @@ describe('CreateTaskPage', () => {
       expect(await screen.findByRole('alert')).toHaveTextContent('No se pudieron cargar los colaboradores.')
       expect(screen.getByLabelText('Responsable (opcional)')).toBeDisabled()
 
-      await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
       expect(mockCreateTask).toHaveBeenCalledWith(expect.objectContaining({ responsibleEmail: undefined }))
@@ -450,7 +450,7 @@ describe('CreateTaskPage', () => {
       vi.mocked(getTeams).mockResolvedValue([])
       const { user } = renderWithProviders(<CreateTaskPage />)
 
-      await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
 
       expect(screen.getByText('Necesitas un equipo asignado por el Administrador para crear tareas.')).toBeInTheDocument()
       expect(screen.getAllByRole('option')).toHaveLength(1)

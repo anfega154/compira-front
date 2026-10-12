@@ -93,7 +93,7 @@ export function CreateTaskPage() {
           <p className="eyebrow">Gestion de tareas</p>
           <h2>Crear tarea</h2>
           <p className="page-copy">
-            Define una nueva tarea con su informacion basica y asignala a un colaborador.
+            Define una nueva tarea con su información básica y asígnala a un colaborador.
           </p>
         </div>
         <button type="button" className="secondary-button" onClick={() => navigate('/tasks')}>
@@ -111,13 +111,13 @@ export function CreateTaskPage() {
                 setTeamId(event.target.value)
                 setResponsibleEmail('')
               }}>
-                <option value="">Selecciona un equipo que coordinas</option>
+                <option value="">Selecciona un equipo</option>
                 {teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
               </select>
               {teams.length === 0 && <p className="field-hint">Necesitas un equipo asignado por el Administrador para crear tareas.</p>}
             </div>
             <div className="task-form-field full">
-              <label htmlFor="task-title">Titulo</label>
+              <label htmlFor="task-title">Título</label>
               <input
                 id="task-title"
                 type="text"
@@ -131,7 +131,7 @@ export function CreateTaskPage() {
             </div>
 
             <div className="task-form-field full">
-              <label htmlFor="task-description">Descripcion</label>
+              <label htmlFor="task-description">Descripción</label>
               <textarea
                 id="task-description"
                 value={description}
@@ -159,7 +159,7 @@ export function CreateTaskPage() {
             </div>
 
             <div className="task-form-field">
-              <label htmlFor="task-due-date">Fecha limite</label>
+              <label htmlFor="task-due-date">Fecha límite</label>
               <input
                 id="task-due-date"
                 type="datetime-local"
@@ -195,5 +195,5 @@ function getErrorMessage(error: unknown): string {
   if (error instanceof TaskRequestError) {
     return error.message
   }
-  return 'Ocurrio un error inesperado. Intenta nuevamente.'
+  return 'Ocurrió un error inesperado. Intenta nuevamente.'
 }

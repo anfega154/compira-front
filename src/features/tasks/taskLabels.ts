@@ -22,7 +22,7 @@ export const TASK_EVENT_LABELS: Record<TaskHistoryEventName, string> = {
   CREATED: 'Tarea creada',
   ASSIGNED: 'Responsable asignado',
   STATUS_CHANGED: 'Cambio de estado',
-  OBSERVATION_ADDED: 'Observacion registrada',
+  OBSERVATION_ADDED: 'Observación registrada',
   REASSIGNED: 'Tarea reasignada',
   CANCELLED: 'Tarea cancelada',
   CLOSED: 'Tarea cerrada',

@@ -3,6 +3,7 @@ import type { Team, TeamMember } from '../teams/teamsApi'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { CharacterCounter } from '../../app/CharacterCounter'
 import { ResponsibleCombobox } from './ResponsibleCombobox'
 import { TaskRequestError, createTask } from './tasksApi'
 
@@ -129,9 +130,11 @@ export function CreateTaskPage() {
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Ej: Preparar informe mensual"
                 maxLength={TITLE_MAX_LENGTH}
+                aria-describedby="task-title-counter"
                 required
                 disabled={isSubmitting}
               />
+              <CharacterCounter id="task-title-counter" length={title.length} max={TITLE_MAX_LENGTH} />
             </div>
 
             <div className="task-form-field full">
@@ -142,9 +145,11 @@ export function CreateTaskPage() {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe qué hay que hacer"
                 maxLength={DESCRIPTION_MAX_LENGTH}
+                aria-describedby="task-description-counter"
                 required
                 disabled={isSubmitting}
               />
+              <CharacterCounter id="task-description-counter" length={description.length} max={DESCRIPTION_MAX_LENGTH} />
             </div>
           </div>
 

@@ -2037,3 +2037,20 @@ th[aria-sort="descending"] .sort-indicator { opacity: 1; color: var(--text-accen
   color: var(--text-muted);
   font-size: var(--fs-meta);
 }
+
+.char-counter {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 1.2em;
+  font-size: var(--fs-meta);
+  color: var(--text-muted);
+}
+
+.char-counter-count {
+  margin-left: auto;
+}
+
+.char-counter.near-limit {
+  color: var(--warning-soft);
+}

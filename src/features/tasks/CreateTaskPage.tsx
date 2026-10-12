@@ -29,6 +29,7 @@ export function CreateTaskPage() {
   useEffect(() => {
     setMembers([])
     setMembersFailed(false)
+    setError(null)
     if (!teamId) {
       setIsLoadingMembers(false)
       return

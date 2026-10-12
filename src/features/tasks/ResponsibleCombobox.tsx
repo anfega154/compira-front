@@ -39,6 +39,7 @@ export function ResponsibleCombobox({
 }: ResponsibleComboboxProps) {
   const listId = useId()
   const containerRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
   const [isOpen, setIsOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
@@ -58,6 +59,9 @@ export function ResponsibleCombobox({
   function open() {
     if (!isInteractive) return
     setIsOpen(true)
+    if (window.matchMedia?.('(max-width: 640px)').matches) {
+      inputRef.current?.scrollIntoView?.({ block: 'center' })
+    }
   }
 
   function close() {
@@ -110,6 +114,7 @@ export function ResponsibleCombobox({
       <div className="combobox-control">
         <input
           id={id}
+          ref={inputRef}
           type="text"
           role="combobox"
           aria-expanded={showList}

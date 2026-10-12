@@ -2174,3 +2174,13 @@ th[aria-sort="descending"] .sort-indicator { opacity: 1; color: var(--text-accen
     max-width: none;
   }
 }
+
+.task-form-field .field-hint {
+  margin: 0;
+  font-size: var(--fs-meta);
+  color: var(--text-muted);
+}
+
+.task-form-field .field-hint.field-warning {
+  color: var(--warning-soft);
+}

@@ -1,3 +1,4 @@
+import { getOrganizationSettings } from '../organization/organizationApi'
 import { getTeamMembers, getTeams } from '../teams/teamsApi'
 import type { Team, TeamMember } from '../teams/teamsApi'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -7,6 +8,7 @@ import { CharacterCounter } from '../../app/CharacterCounter'
 import { Toast } from '../../app/Toast'
 import { ResponsibleCombobox } from './ResponsibleCombobox'
 import { TaskRequestError, createTask } from './tasksApi'
+import { formatTimeZoneLabel, getDeviceTimeZone } from './timeZone'
 import { PAST_DUE_DATE_MESSAGE, getMinDueDate, getSubmitHint, isPastDueDate } from './taskFormRules'
 
 const TITLE_MAX_LENGTH = 150
@@ -16,6 +18,7 @@ export function CreateTaskPage() {
   const navigate = useNavigate()
   const [teams, setTeams] = useState<Team[]>([])
   const [teamsLoaded, setTeamsLoaded] = useState(false)
+  const [organizationTimeZone, setOrganizationTimeZone] = useState<string | null>(null)
   const [teamId, setTeamId] = useState('')
   const [members, setMembers] = useState<TeamMember[]>([])
   const [isLoadingMembers, setIsLoadingMembers] = useState(false)
@@ -30,6 +33,14 @@ export function CreateTaskPage() {
     }).catch(error => {
       if (!controller.signal.aborted) setError(error instanceof Error ? error.message : 'No se pudieron cargar los equipos.')
     })
+    return () => controller.abort()
+  }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    getOrganizationSettings(controller.signal).then(settings => {
+      if (!controller.signal.aborted) setOrganizationTimeZone(settings.timeZone)
+    }).catch(() => undefined)
     return () => controller.abort()
   }, [])
 
@@ -70,6 +81,8 @@ export function CreateTaskPage() {
   }, [createdTask])
 
   const [now, setNow] = useState(() => new Date())
+  const deviceTimeZone = getDeviceTimeZone()
+  const hasDifferentOrganizationZone = organizationTimeZone !== null && organizationTimeZone !== deviceTimeZone
   const [isHintOpen, setIsHintOpen] = useState(false)
 
   const isDueDatePast = isPastDueDate(dueDate, now)
@@ -207,6 +220,12 @@ export function CreateTaskPage() {
                 disabled={isSubmitting}
               />
               {isDueDatePast && <p id="task-due-date-error" className="field-error">{PAST_DUE_DATE_MESSAGE}</p>}
+              <p className="field-hint">Hora de tu dispositivo: {formatTimeZoneLabel(deviceTimeZone, now)}</p>
+              {hasDifferentOrganizationZone && (
+                <p className="field-hint field-warning">
+                  Tu organización usa {formatTimeZoneLabel(organizationTimeZone, now)}. La fecha se guardará con la hora de tu dispositivo.
+                </p>
+              )}
             </div>
           </div>
 

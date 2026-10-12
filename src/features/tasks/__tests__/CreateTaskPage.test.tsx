@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderWithProviders } from '../../../test/render'
 import { CreateTaskPage } from '../CreateTaskPage'
@@ -400,8 +400,205 @@ describe('CreateTaskPage', () => {
   })
 
   describe('E4 · due date earlier than now', () => {
-    // Pending in the component: there is no past-date validation.
-    it.todo('shows "La fecha límite no puede ser anterior al momento actual" and does not create the task')
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    function freezeTime() {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date('2026-10-11T10:00:30'))
+    }
+
+    /**
+     * Case: the current time is 10:00:30.
+     * Expected: the due date field does not allow dates before the next minute.
+     * Result: the min attribute is "2026-10-11T10:01".
+     */
+    it('sets the min attribute of the due date to the next minute', () => {
+      freezeTime()
+      renderWithProviders(<CreateTaskPage />)
+
+      expect(screen.getByLabelText('Fecha límite')).toHaveAttribute('min', '2026-10-11T10:01')
+    })
+
+    /**
+     * Case: the page stays open for a while and the user focuses the due date field.
+     * Expected: the minimum is recalculated with the current time.
+     * Result: the min attribute moves to the next minute after focusing.
+     */
+    it('recalculates the min attribute when the due date field is focused', () => {
+      freezeTime()
+      renderWithProviders(<CreateTaskPage />)
+      vi.setSystemTime(new Date('2026-10-11T10:30:10'))
+
+      fireEvent.focus(screen.getByLabelText('Fecha límite'))
+
+      expect(screen.getByLabelText('Fecha límite')).toHaveAttribute('min', '2026-10-11T10:31')
+    })
+
+    /**
+     * Case: a past date is typed by hand (min does not prevent typing) with the rest of the fields filled in.
+     * Expected: the red message "La fecha límite no puede ser anterior al momento actual" appears under the field, the field is invalid and the button is disabled.
+     * Result: the message is rendered, aria-invalid is true, the button is disabled and createTask is not called.
+     */
+    it('shows the red message, marks the field invalid and disables submit for a past date', async () => {
+      freezeTime()
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await fillRequiredFields(user)
+      fireEvent.change(screen.getByLabelText('Fecha límite'), { target: { value: '2026-10-11T09:00' } })
+
+      const message = screen.getByText('La fecha límite no puede ser anterior al momento actual')
+      expect(message).toHaveClass('field-error')
+      expect(screen.getByLabelText('Fecha límite')).toHaveAttribute('aria-invalid', 'true')
+      expect(screen.getByLabelText('Fecha límite')).toHaveAttribute('aria-describedby', message.id)
+      expect(screen.getByRole('button', { name: /crear tarea/i })).toBeDisabled()
+      expect(mockCreateTask).not.toHaveBeenCalled()
+    })
+
+    /**
+     * Case: a future date is selected with the rest of the fields filled in.
+     * Expected: no message and the button is enabled.
+     * Result: no past-date message, aria-invalid false and the button enabled.
+     */
+    it('shows no message and enables submit for a future date', async () => {
+      freezeTime()
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await fillRequiredFields(user)
+
+      expect(screen.queryByText('La fecha límite no puede ser anterior al momento actual')).not.toBeInTheDocument()
+      expect(screen.getByLabelText('Fecha límite')).toHaveAttribute('aria-invalid', 'false')
+      expect(screen.getByRole('button', { name: /crear tarea/i })).toBeEnabled()
+    })
+
+    /**
+     * Case: the backend rejects the date (TASK_011) although the form allowed it.
+     * Expected: the backend message is shown in a red alert and the task is not created.
+     * Result: the alert contains "La fecha límite no puede ser anterior al momento actual" and no success status appears.
+     */
+    it('shows the backend message when the date is rejected by the server', async () => {
+      const { TaskRequestError } = await import('../tasksApi')
+      mockCreateTask.mockRejectedValueOnce(new TaskRequestError({ code: 'TASK_011', message: 'La fecha límite no puede ser anterior al momento actual' }))
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await fillRequiredFields(user)
+      await user.click(screen.getByRole('button', { name: /crear tarea/i }))
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('La fecha límite no puede ser anterior al momento actual')
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('submit button hint', () => {
+    function submitWrapper() {
+      return screen.getByRole('button', { name: /crear tarea|creando tarea/i }).parentElement as HTMLElement
+    }
+
+    /**
+     * Case: the form is empty and the user hovers the disabled button.
+     * Expected: a tooltip lists only the pending fields: "Para crear la tarea falta: equipo, título, descripción, fecha límite".
+     * Result: an element with role tooltip shows that text.
+     */
+    it('shows a tooltip with the pending fields when hovering the disabled button', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await user.hover(submitWrapper())
+
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Para crear la tarea falta: equipo, título, descripción, fecha límite')
+    })
+
+    /**
+     * Case: some fields are filled in and the keyboard user focuses the disabled button wrapper.
+     * Expected: the tooltip lists only the fields that are still pending.
+     * Result: the tooltip says "Para crear la tarea falta: descripción, fecha límite".
+     */
+    it('shows only the pending fields on keyboard focus', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+      await selectTeam(user)
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+
+      fireEvent.focus(submitWrapper())
+
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Para crear la tarea falta: descripción, fecha límite')
+      expect(submitWrapper()).toHaveAttribute('tabindex', '0')
+    })
+
+    /**
+     * Case: the due date is before the current moment.
+     * Expected: the hint says the date must be later than the current moment.
+     * Result: the tooltip includes "la fecha límite debe ser posterior al momento actual".
+     */
+    it('mentions the past due date in the hint', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await fillRequiredFields(user)
+      fireEvent.change(screen.getByLabelText('Fecha límite'), { target: { value: '2000-01-01T10:00' } })
+      await user.hover(submitWrapper())
+
+      expect(screen.getByRole('tooltip')).toHaveTextContent('la fecha límite debe ser posterior al momento actual')
+    })
+
+    /**
+     * Case: the coordinator has no teams.
+     * Expected: the hint explains that an administrator must assign a team.
+     * Result: the tooltip shows "Necesitas un equipo asignado por el Administrador para crear tareas.".
+     */
+    it('explains the lack of teams in the hint', async () => {
+      vi.mocked(getTeams).mockResolvedValue([])
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await user.hover(submitWrapper())
+
+      await waitFor(() => expect(screen.getByRole('tooltip')).toHaveTextContent('Necesitas un equipo asignado por el Administrador para crear tareas.'))
+    })
+
+    /**
+     * Case: all required fields are filled in (enabled button).
+     * Expected: no tooltip and no hint text.
+     * Result: hovering shows no tooltip and the button has no aria-describedby.
+     */
+    it('shows no hint when the button is enabled', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await fillRequiredFields(user)
+      await user.hover(submitWrapper())
+
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /crear tarea/i })).not.toHaveAttribute('aria-describedby')
+    })
+
+    /**
+     * Case: the task is being sent.
+     * Expected: no tooltip while submitting.
+     * Result: after clicking create, hovering shows no tooltip.
+     */
+    it('shows no hint while the task is being sent', async () => {
+      mockCreateTask.mockReturnValueOnce(new Promise(() => {}))
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await fillRequiredFields(user)
+      await user.click(screen.getByRole('button', { name: /crear tarea/i }))
+      await user.hover(submitWrapper())
+
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    })
+
+    /**
+     * Case: the button is disabled and the device has no hover (touch).
+     * Expected: the same text exists as visible text under the button, linked with aria-describedby (the stylesheet shows it on touch and narrow screens).
+     * Result: the button points with aria-describedby to a paragraph with the hint text and keeps the disabled attribute.
+     */
+    it('links the hint text to the disabled button with aria-describedby', async () => {
+      renderWithProviders(<CreateTaskPage />)
+      await screen.findByRole('option', { name: 'Operaciones' })
+
+      const button = screen.getByRole('button', { name: /crear tarea/i })
+      const hintId = button.getAttribute('aria-describedby')
+      expect(button).toBeDisabled()
+      expect(hintId).toBeTruthy()
+      expect(document.getElementById(hintId as string)).toHaveTextContent('Para crear la tarea falta: equipo, título, descripción, fecha límite')
+    })
   })
 
   describe('E5 · invalid responsible', () => {
@@ -600,7 +797,7 @@ describe('CreateTaskPage', () => {
 
       await user.type(screen.getByLabelText('Título'), 'Preparar informe')
 
-      expect(screen.getByText('Necesitas un equipo asignado por el Administrador para crear tareas.')).toBeInTheDocument()
+      expect(document.querySelector('.field-hint')).toHaveTextContent('Necesitas un equipo asignado por el Administrador para crear tareas.')
       expect(screen.getAllByRole('option')).toHaveLength(1)
       expect(screen.getByRole('button', { name: /crear tarea/i })).toBeDisabled()
     })

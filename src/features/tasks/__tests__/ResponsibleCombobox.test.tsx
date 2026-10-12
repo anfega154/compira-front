@@ -165,6 +165,64 @@ describe('ResponsibleCombobox', () => {
   })
 
   /**
+   * Case: the list is open, the user presses ↓ twice and ↑ once, then Enter.
+   * Expected: the active option moves down and up and Enter selects the active one.
+   * Result: onChange is called with the email of the second member.
+   */
+  it('moves the active option up with ArrowUp', async () => {
+    const { user, input, onChange } = setup()
+
+    await user.click(input)
+    await user.keyboard('{ArrowDown}{ArrowDown}{ArrowUp}{Enter}')
+
+    expect(onChange).toHaveBeenCalledWith('colab.b@compira.co')
+  })
+
+  /**
+   * Case: the list is closed and the user presses ↑.
+   * Expected: the list opens, like with ↓.
+   * Result: the listbox appears.
+   */
+  it('opens the list with ArrowUp when it is closed', async () => {
+    const { user, input } = setup()
+
+    input.focus()
+    await user.keyboard('{Escape}{ArrowUp}')
+
+    expect(screen.getByRole('listbox')).toBeInTheDocument()
+  })
+
+  /**
+   * Case: no member matches and the user presses ↓.
+   * Expected: the active index stays valid and no option is selected on Enter.
+   * Result: the empty-state message remains and onChange is not called.
+   */
+  it('keeps a valid active index when the filtered list is empty', async () => {
+    const { user, input, onChange } = setup()
+
+    await user.type(input, 'zzz')
+    await user.keyboard('{ArrowDown}{Enter}')
+
+    expect(screen.getByText('Ningún colaborador del equipo coincide con "zzz"')).toBeInTheDocument()
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  /**
+   * Case: the list is open and the user presses Tab.
+   * Expected: the list closes without selecting any option.
+   * Result: the listbox disappears and onChange is not called.
+   */
+  it('closes with Tab without selecting', async () => {
+    const { user, input, onChange } = setup()
+
+    await user.click(input)
+    await user.tab()
+
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  /**
    * Case: the list is open and the user presses Escape.
    * Expected: the list closes without changing the value.
    * Result: the listbox disappears and onChange is not called.

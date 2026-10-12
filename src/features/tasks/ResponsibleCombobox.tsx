@@ -76,9 +76,10 @@ export function ResponsibleCombobox({
     if (event.key === 'ArrowDown') {
       event.preventDefault()
       if (!isOpen) return open()
-      setActiveIndex(index => Math.min(index + 1, filtered.length - 1))
+      setActiveIndex(index => Math.min(index + 1, Math.max(filtered.length - 1, 0)))
     } else if (event.key === 'ArrowUp') {
       event.preventDefault()
+      if (!isOpen) return open()
       setActiveIndex(index => Math.max(index - 1, 0))
     } else if (event.key === 'Enter') {
       if (showList && filtered[activeIndex]) {

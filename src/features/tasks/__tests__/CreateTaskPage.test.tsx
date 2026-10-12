@@ -168,6 +168,83 @@ describe('CreateTaskPage', () => {
     })
   })
 
+  describe('success notice', () => {
+    async function createTaskSuccessfully() {
+      mockCreateTask.mockResolvedValueOnce(createdTask)
+      const rendered = renderWithProviders(<CreateTaskPage />)
+      await fillRequiredFields(rendered.user)
+      await rendered.user.click(screen.getByRole('button', { name: /crear tarea/i }))
+      await screen.findByRole('status')
+      return rendered
+    }
+
+    /**
+     * Case: the task was created.
+     * Expected: a notice with the exact message and a "Ver tarea" link to the task detail.
+     * Result: the status shows the message and the link points to /tasks/t1.
+     */
+    it('shows the exact message with a link to the created task', async () => {
+      await createTaskSuccessfully()
+
+      expect(screen.getByRole('status')).toHaveTextContent('Tarea "Preparar informe" creada correctamente.')
+      expect(screen.getByRole('link', { name: 'Ver tarea' })).toHaveAttribute('href', '/tasks/t1')
+    })
+
+    /**
+     * Case: the task was created and the user closes the notice with the button.
+     * Expected: the notice disappears.
+     * Result: no status is rendered after clicking the close button.
+     */
+    it('closes the notice with the close button', async () => {
+      const { user } = await createTaskSuccessfully()
+
+      await user.click(screen.getByRole('button', { name: 'Cerrar aviso' }))
+
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    })
+
+    /**
+     * Case: the task was created and the user presses Escape.
+     * Expected: the notice disappears.
+     * Result: no status is rendered after pressing Escape.
+     */
+    it('closes the notice with Escape', async () => {
+      const { user } = await createTaskSuccessfully()
+
+      await user.keyboard('{Escape}')
+
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    })
+
+    /**
+     * Case: the task was created.
+     * Expected: the form is cleared and the focus goes back to the Título field to create another task.
+     * Result: the Título field is empty and has the focus.
+     */
+    it('returns the focus to the title after creating the task', async () => {
+      await createTaskSuccessfully()
+
+      expect(screen.getByLabelText('Título')).toHaveValue('')
+      expect(screen.getByLabelText('Título')).toHaveFocus()
+    })
+
+    /**
+     * Case: the creation fails.
+     * Expected: the error stays inside the form (role alert), not in a notice.
+     * Result: an alert is shown and no status notice appears.
+     */
+    it('keeps errors inside the form instead of a notice', async () => {
+      mockCreateTask.mockRejectedValueOnce(new Error('boom'))
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await fillRequiredFields(user)
+      await user.click(screen.getByRole('button', { name: /crear tarea/i }))
+
+      expect(await screen.findByRole('alert')).toBeInTheDocument()
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    })
+  })
+
   describe('E2 · create task with responsible', () => {
     /**
      * Case: besides the basic data, an active collaborator of the team is picked from the list.

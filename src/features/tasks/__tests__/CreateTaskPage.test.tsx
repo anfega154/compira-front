@@ -21,8 +21,8 @@ vi.mock('../tasksApi', () => ({
   },
 }))
 
-vi.mock('../../teams/teamsApi', () => ({ getTeams: vi.fn() }))
-import { getTeams } from '../../teams/teamsApi'
+vi.mock('../../teams/teamsApi', () => ({ getTeams: vi.fn(), getTeamMembers: vi.fn() }))
+import { getTeamMembers, getTeams } from '../../teams/teamsApi'
 import { createTask } from '../tasksApi'
 
 const mockCreateTask = vi.mocked(createTask)
@@ -40,6 +40,16 @@ const createdTask = {
   updatedAt: '',
 }
 
+const teamMembers = [
+  { id: 'm1', email: 'ana@compira.co', firstName: 'Ana', lastName: 'García' },
+  { id: 'm2', email: 'luis@compira.co', firstName: 'Luis', lastName: 'Pérez' },
+]
+
+async function selectResponsible(user: ReturnType<typeof renderWithProviders>['user'], name: RegExp) {
+  await user.click(screen.getByLabelText('Responsable (opcional)'))
+  await user.click(await screen.findByRole('option', { name }))
+}
+
 async function selectTeam(user: ReturnType<typeof renderWithProviders>['user']) {
   await screen.findByRole('option', { name: 'Operaciones' })
   await user.selectOptions(screen.getByLabelText('Equipo'), 'team-1')
@@ -47,6 +57,7 @@ async function selectTeam(user: ReturnType<typeof renderWithProviders>['user']) 
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.mocked(getTeamMembers).mockResolvedValue(teamMembers)
   vi.mocked(getTeams).mockResolvedValue([{ id: 'team-1', name: 'Operaciones', coordinatorUserId: 'c1', coordinatorEmail: 'coordinator@compira.co' }])
 })
 
@@ -109,7 +120,7 @@ describe('CreateTaskPage', () => {
       expect(screen.getByLabelText('Titulo')).toHaveValue('')
       expect(screen.getByLabelText('Descripcion')).toHaveValue('')
       expect(screen.getByLabelText('Fecha limite')).toHaveValue('')
-      expect(screen.getByLabelText('Responsable (correo)')).toHaveValue('')
+      expect(screen.getByLabelText('Responsable (opcional)')).toHaveValue('')
     })
 
     /**
@@ -132,17 +143,17 @@ describe('CreateTaskPage', () => {
 
   describe('E2 · create task with responsible', () => {
     /**
-     * Case: besides the basic data, the email of an active collaborator is entered.
+     * Case: besides the basic data, an active collaborator of the team is picked from the list.
      * Expected: the task is created assigned to that responsible.
      * Result: createTask receives responsibleEmail and the success message is shown.
      */
-    it('sends the trimmed responsible email when creating the task', async () => {
+    it('sends the email of the collaborator picked from the list', async () => {
       mockCreateTask.mockResolvedValueOnce({ ...createdTask, responsibleUserId: 'u1' })
       const { user } = renderWithProviders(<CreateTaskPage />)
 
       await selectTeam(user)
       await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
-      await user.type(screen.getByLabelText('Responsable (correo)'), 'ana@compira.co')
+      await selectResponsible(user, /Ana García/)
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
       expect(mockCreateTask).toHaveBeenCalledWith(expect.objectContaining({ teamId: 'team-1', responsibleEmail: 'ana@compira.co' }))
@@ -258,7 +269,7 @@ describe('CreateTaskPage', () => {
 
       await selectTeam(user)
       await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
-      await user.type(screen.getByLabelText('Responsable (correo)'), 'otro@compira.co')
+      await selectResponsible(user, /Luis Pérez/)
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
       expect(await screen.findByRole('alert')).toHaveTextContent(message)
@@ -297,6 +308,114 @@ describe('CreateTaskPage', () => {
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
       expect(await screen.findByRole('alert')).toHaveTextContent('Ocurrio un error inesperado. Intenta nuevamente.')
+    })
+  })
+
+  /**
+   * HU-12 · selector filtrable de responsable.
+   */
+  describe('responsible selector', () => {
+    /**
+     * Case: no team is selected yet.
+     * Expected: the field is disabled with "Selecciona primero un equipo" and members are not requested.
+     * Result: the input is disabled with that placeholder and getTeamMembers is not called.
+     */
+    it('is disabled until a team is selected', () => {
+      renderWithProviders(<CreateTaskPage />)
+
+      const field = screen.getByLabelText('Responsable (opcional)')
+      expect(field).toBeDisabled()
+      expect(field).toHaveAttribute('placeholder', 'Selecciona primero un equipo')
+      expect(getTeamMembers).not.toHaveBeenCalled()
+    })
+
+    /**
+     * Case: the user selects a team.
+     * Expected: the members of that team are loaded and the field is enabled.
+     * Result: getTeamMembers is called with the team id and the field becomes enabled.
+     */
+    it('loads the team members and enables the field when a team is selected', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await selectTeam(user)
+
+      expect(getTeamMembers).toHaveBeenCalledWith('team-1', expect.any(AbortSignal))
+      await vi.waitFor(() => expect(screen.getByLabelText('Responsable (opcional)')).toBeEnabled())
+    })
+
+    /**
+     * Case: a responsible is chosen and then the team changes.
+     * Expected: the chosen responsible is cleared.
+     * Result: the field is empty after changing the team.
+     */
+    it('clears the responsible when the team changes', async () => {
+      vi.mocked(getTeams).mockResolvedValue([
+        { id: 'team-1', name: 'Operaciones', coordinatorUserId: 'c1', coordinatorEmail: 'coordinator@compira.co' },
+        { id: 'team-2', name: 'Soporte', coordinatorUserId: 'c1', coordinatorEmail: 'coordinator@compira.co' },
+      ])
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await selectTeam(user)
+      await selectResponsible(user, /Ana García/)
+      expect(screen.getByLabelText('Responsable (opcional)')).toHaveValue('Ana García')
+      await user.selectOptions(screen.getByLabelText('Equipo'), 'team-2')
+
+      expect(screen.getByLabelText('Responsable (opcional)')).toHaveValue('')
+    })
+
+    /**
+     * Case: a responsible is chosen and the task is created.
+     * Expected: the responsible is cleared with the rest of the form.
+     * Result: the field is empty after the success message.
+     */
+    it('clears the responsible after creating the task', async () => {
+      mockCreateTask.mockResolvedValueOnce({ ...createdTask, responsibleUserId: 'm1' })
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await selectTeam(user)
+      await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
+      await selectResponsible(user, /Ana García/)
+      await user.click(screen.getByRole('button', { name: /crear tarea/i }))
+
+      await screen.findByRole('status')
+      expect(screen.getByLabelText('Responsable (opcional)')).toHaveValue('')
+    })
+
+    /**
+     * Case: loading the members fails.
+     * Expected: an alert with the error is shown, the field stays disabled and the task can still be created without responsible.
+     * Result: the alert shows the message, the field is disabled and createTask is called without responsibleEmail.
+     */
+    it('shows an error and still allows creating the task without responsible when members fail to load', async () => {
+      vi.mocked(getTeamMembers).mockRejectedValue(new Error('No se pudieron cargar los colaboradores.'))
+      mockCreateTask.mockResolvedValueOnce(createdTask)
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await selectTeam(user)
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('No se pudieron cargar los colaboradores.')
+      expect(screen.getByLabelText('Responsable (opcional)')).toBeDisabled()
+
+      await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
+      await user.click(screen.getByRole('button', { name: /crear tarea/i }))
+
+      expect(mockCreateTask).toHaveBeenCalledWith(expect.objectContaining({ responsibleEmail: undefined }))
+    })
+
+    /**
+     * Case: the selected team has no collaborators.
+     * Expected: "Este equipo aún no tiene colaboradores. Puedes crear la tarea sin responsable." is shown.
+     * Result: the message appears when opening the field.
+     */
+    it('shows a message when the team has no collaborators', async () => {
+      vi.mocked(getTeamMembers).mockResolvedValue([])
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await selectTeam(user)
+      await vi.waitFor(() => expect(screen.getByLabelText('Responsable (opcional)')).toBeEnabled())
+      await user.click(screen.getByLabelText('Responsable (opcional)'))
+
+      expect(screen.getByText('Este equipo aún no tiene colaboradores. Puedes crear la tarea sin responsable.')).toBeInTheDocument()
     })
   })
 

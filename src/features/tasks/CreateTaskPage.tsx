@@ -1,9 +1,10 @@
 import { getTeamMembers, getTeams } from '../teams/teamsApi'
 import type { Team, TeamMember } from '../teams/teamsApi'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CharacterCounter } from '../../app/CharacterCounter'
+import { Toast } from '../../app/Toast'
 import { ResponsibleCombobox } from './ResponsibleCombobox'
 import { TaskRequestError, createTask } from './tasksApi'
 import { PAST_DUE_DATE_MESSAGE, getMinDueDate, getSubmitHint, isPastDueDate } from './taskFormRules'
@@ -60,7 +61,13 @@ export function CreateTaskPage() {
   const [responsibleEmail, setResponsibleEmail] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
+  const [createdTask, setCreatedTask] = useState<{ id: string; title: string } | null>(null)
+  const titleRef = useRef<HTMLInputElement>(null)
+  const closeToast = useCallback(() => setCreatedTask(null), [])
+
+  useEffect(() => {
+    if (createdTask) titleRef.current?.focus()
+  }, [createdTask])
 
   const [now, setNow] = useState(() => new Date())
   const [isHintOpen, setIsHintOpen] = useState(false)
@@ -84,7 +91,7 @@ export function CreateTaskPage() {
     if (isPastDueDate(dueDate, submittedAt)) return
 
     setError(null)
-    setSuccess(null)
+    setCreatedTask(null)
     setIsSubmitting(true)
 
     try {
@@ -95,7 +102,7 @@ export function CreateTaskPage() {
         dueDate: new Date(dueDate).toISOString(),
         responsibleEmail: responsibleEmail.trim() ? responsibleEmail.trim() : undefined,
       })
-      setSuccess(`Tarea "${task.title}" creada correctamente.`)
+      setCreatedTask({ id: task.id, title: task.title })
       setTitle('')
       setDescription('')
       setDueDate('')
@@ -141,6 +148,7 @@ export function CreateTaskPage() {
               <label htmlFor="task-title">Título</label>
               <input
                 id="task-title"
+                ref={titleRef}
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -208,12 +216,6 @@ export function CreateTaskPage() {
             </div>
           )}
 
-          {success && (
-            <div className="feedback success" role="status">
-              {success}
-            </div>
-          )}
-
           <div className="submit-area">
             <span
               className="submit-hint-wrapper"
@@ -237,6 +239,13 @@ export function CreateTaskPage() {
           </div>
         </form>
       </article>
+      {createdTask && (
+        <Toast
+          message={`Tarea "${createdTask.title}" creada correctamente.`}
+          action={{ label: 'Ver tarea', to: `/tasks/${createdTask.id}` }}
+          onClose={closeToast}
+        />
+      )}
     </section>
   )
 }

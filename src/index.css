@@ -2118,3 +2118,59 @@ th[aria-sort="descending"] .sort-indicator { opacity: 1; color: var(--text-accen
     display: none;
   }
 }
+
+.toast {
+  position: fixed;
+  top: var(--space-5);
+  right: var(--space-5);
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: min(28rem, calc(100vw - 2 * var(--space-5)));
+  padding: 0.8rem 1rem;
+  background: var(--success-surface);
+  border: 1px solid var(--success-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  color: var(--success-soft);
+  font-size: var(--fs-label);
+}
+
+.toast-message {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.toast-action {
+  flex: none;
+  color: var(--text-strong);
+  font-weight: var(--fw-semibold);
+  text-decoration: underline;
+}
+
+.toast-close {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.toast-close:hover,
+.toast-close:focus-visible {
+  background: var(--surface-hover);
+}
+
+@media (max-width: 640px) {
+  .toast {
+    top: auto;
+    right: var(--space-4);
+    left: var(--space-4);
+    bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+    max-width: none;
+  }
+}

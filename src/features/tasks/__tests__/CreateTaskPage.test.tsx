@@ -869,6 +869,36 @@ describe('CreateTaskPage', () => {
     })
   })
 
+  describe('layout and visual states', () => {
+    /**
+     * Case: the form is rendered.
+     * Expected: the form uses a single column and a narrow panel, and the page does not repeat the section name as eyebrow.
+     * Result: both field groups have the single-column class, the panel is narrow and "Gestion de tareas" is absent.
+     */
+    it('uses a single column, a narrow panel and no repeated eyebrow', () => {
+      const { container } = renderWithProviders(<CreateTaskPage />)
+
+      expect(container.querySelectorAll('.task-form-grid.single')).toHaveLength(2)
+      expect(container.querySelector('.form-panel')).toHaveClass('narrow')
+      expect(container.querySelector('.eyebrow')).not.toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Crear tarea' })).toBeInTheDocument()
+    })
+
+    /**
+     * Case: no team is selected, then a team is selected.
+     * Expected: the team select looks like a placeholder only while it has no value.
+     * Result: the select has the is-placeholder class without a team and loses it with a team.
+     */
+    it('marks the team select as placeholder only while it has no value', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+      expect(screen.getByLabelText('Equipo')).toHaveClass('is-placeholder')
+
+      await selectTeam(user)
+
+      expect(screen.getByLabelText('Equipo')).not.toHaveClass('is-placeholder')
+    })
+  })
+
   describe('due date time zone', () => {
     /**
      * Case: the form is rendered on a device in America/Bogota.

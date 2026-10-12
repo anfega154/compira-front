@@ -243,11 +243,11 @@ describe('CreateTaskPage', () => {
     })
 
     /**
-     * Case: the description limit is checked (the component defines 2000; the HU asks for 150).
-     * Expected: the description has a character limit.
-     * Result: the textarea has maxLength = 2000 (current behavior, differs from the HU).
+     * Case: the description limit is checked.
+     * Expected: the description accepts at most 2000 characters.
+     * Result: the textarea has maxLength = 2000.
      */
-    it('limits the description to 2000 characters (current component behavior)', () => {
+    it('limits the description to 2000 characters', () => {
       renderWithProviders(<CreateTaskPage />)
       expect(screen.getByLabelText('Descripción')).toHaveAttribute('maxLength', '2000')
     })
@@ -337,8 +337,66 @@ describe('CreateTaskPage', () => {
         responsibleEmail: undefined,
       })
     })
-    // Pending in the component: DESCRIPTION_MAX_LENGTH is 2000 and the HU asks for 150.
-    it.todo('limits the description to 150 characters')
+
+    /**
+     * Case: 10 characters are typed in the title.
+     * Expected: a counter "10/150" is shown under the title and linked to the field.
+     * Result: the counter text is rendered and the title has aria-describedby pointing to it.
+     */
+    it('shows a character counter under the title', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await user.type(screen.getByLabelText('Título'), '0123456789')
+
+      expect(screen.getByText('10/150')).toBeInTheDocument()
+      expect(screen.getByLabelText('Título')).toHaveAttribute('aria-describedby', 'task-title-counter')
+      expect(document.getElementById('task-title-counter')).toContainElement(screen.getByText('10/150'))
+    })
+
+    /**
+     * Case: the title reaches 90 % of its limit (135 characters).
+     * Expected: the counter changes to the warning color.
+     * Result: the counter has the near-limit class.
+     */
+    it('warns when the title reaches 90 % of the limit', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await user.click(screen.getByLabelText('Título'))
+      await user.paste('a'.repeat(135))
+
+      expect(document.getElementById('task-title-counter')).toHaveClass('near-limit')
+    })
+
+    /**
+     * Case: the title reaches its limit (150 characters).
+     * Expected: the notice "Llegaste al máximo de 150 caracteres" is shown.
+     * Result: the notice is rendered.
+     */
+    it('shows the limit notice when the title reaches 150 characters', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await user.click(screen.getByLabelText('Título'))
+      await user.paste('a'.repeat(150))
+
+      expect(screen.getByText('Llegaste al máximo de 150 caracteres')).toBeInTheDocument()
+    })
+
+    /**
+     * Case: the user pastes more than 2000 characters in the description.
+     * Expected: the field keeps the first 2000 characters and shows the limit notice.
+     * Result: the value has 2000 characters, the counter shows 2000/2000 and the notice appears.
+     */
+    it('keeps 2000 characters and shows the notice when the description is over the limit', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await user.click(screen.getByLabelText('Descripción'))
+      await user.paste('b'.repeat(2001))
+
+      expect(screen.getByLabelText('Descripción')).toHaveValue('b'.repeat(2000))
+      expect(screen.getByText('2000/2000')).toBeInTheDocument()
+      expect(screen.getByText('Llegaste al máximo de 2000 caracteres')).toBeInTheDocument()
+      expect(screen.getByLabelText('Descripción')).toHaveAttribute('aria-describedby', 'task-description-counter')
+    })
   })
 
   describe('E4 · due date earlier than now', () => {

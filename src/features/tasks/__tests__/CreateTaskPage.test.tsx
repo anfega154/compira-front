@@ -23,6 +23,12 @@ vi.mock('../tasksApi', () => ({
 
 vi.mock('../../teams/teamsApi', () => ({ getTeams: vi.fn(), getTeamMembers: vi.fn() }))
 import { getTeamMembers, getTeams } from '../../teams/teamsApi'
+vi.mock('../../organization/organizationApi', () => ({ getOrganizationSettings: vi.fn() }))
+import { getOrganizationSettings } from '../../organization/organizationApi'
+vi.mock('../timeZone', async () => {
+  const actual = await vi.importActual<typeof import('../timeZone')>('../timeZone')
+  return { ...actual, getDeviceTimeZone: () => 'America/Bogota' }
+})
 import { createTask } from '../tasksApi'
 
 const mockCreateTask = vi.mocked(createTask)
@@ -71,6 +77,7 @@ async function fillRequiredFields(user: TestUser) {
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(getTeamMembers).mockResolvedValue(teamMembers)
+  vi.mocked(getOrganizationSettings).mockResolvedValue({ timeZone: null, notificationsEnabled: true })
   vi.mocked(getTeams).mockResolvedValue([{ id: 'team-1', name: 'Operaciones', coordinatorUserId: 'c1', coordinatorEmail: 'coordinator@compira.co' }])
 })
 
@@ -859,6 +866,73 @@ describe('CreateTaskPage', () => {
       await user.click(screen.getByLabelText('Responsable (opcional)'))
 
       expect(screen.getByText('Este equipo aún no tiene colaboradores. Puedes crear la tarea sin responsable.')).toBeInTheDocument()
+    })
+  })
+
+  describe('due date time zone', () => {
+    /**
+     * Case: the form is rendered on a device in America/Bogota.
+     * Expected: under the due date, "Hora de tu dispositivo: America/Bogota (UTC−05:00)" is shown.
+     * Result: the hint with the device zone and offset is rendered.
+     */
+    it('shows the device time zone under the due date', () => {
+      renderWithProviders(<CreateTaskPage />)
+
+      expect(screen.getByText('Hora de tu dispositivo: America/Bogota (UTC−05:00)')).toBeInTheDocument()
+    })
+
+    /**
+     * Case: the organization uses a different time zone than the device.
+     * Expected: a warning says that the date is saved with the device time.
+     * Result: the warning names the organization zone and the device-time note.
+     */
+    it('warns when the organization zone differs from the device zone', async () => {
+      vi.mocked(getOrganizationSettings).mockResolvedValue({ timeZone: 'Europe/Madrid', notificationsEnabled: true })
+      renderWithProviders(<CreateTaskPage />)
+
+      const warning = await screen.findByText(/Tu organización usa Europe\/Madrid \(UTC\+0[12]:00\)/)
+      expect(warning).toHaveTextContent('La fecha se guardará con la hora de tu dispositivo.')
+    })
+
+    /**
+     * Case: the organization uses the same time zone as the device.
+     * Expected: no warning.
+     * Result: no "Tu organización usa" text is shown.
+     */
+    it('shows no warning when the organization zone equals the device zone', async () => {
+      vi.mocked(getOrganizationSettings).mockResolvedValue({ timeZone: 'America/Bogota', notificationsEnabled: true })
+      renderWithProviders(<CreateTaskPage />)
+
+      await waitFor(() => expect(getOrganizationSettings).toHaveBeenCalled())
+      expect(screen.queryByText(/Tu organización usa/)).not.toBeInTheDocument()
+    })
+
+    /**
+     * Case: the organization has no time zone configured.
+     * Expected: no warning.
+     * Result: no "Tu organización usa" text is shown.
+     */
+    it('shows no warning when the organization has no zone', async () => {
+      renderWithProviders(<CreateTaskPage />)
+
+      await waitFor(() => expect(getOrganizationSettings).toHaveBeenCalled())
+      expect(screen.queryByText(/Tu organización usa/)).not.toBeInTheDocument()
+    })
+
+    /**
+     * Case: reading the organization settings fails (for example, no permission).
+     * Expected: only the device zone is shown and the form is not blocked or flagged with an error.
+     * Result: the device hint is present, there is no alert and the fields stay enabled.
+     */
+    it('shows only the device zone and no error when the settings cannot be read', async () => {
+      vi.mocked(getOrganizationSettings).mockRejectedValue(new Error('forbidden'))
+      renderWithProviders(<CreateTaskPage />)
+
+      await waitFor(() => expect(getOrganizationSettings).toHaveBeenCalled())
+      expect(screen.getByText('Hora de tu dispositivo: America/Bogota (UTC−05:00)')).toBeInTheDocument()
+      expect(screen.queryByText(/Tu organización usa/)).not.toBeInTheDocument()
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      expect(screen.getByLabelText('Fecha límite')).toBeEnabled()
     })
   })
 

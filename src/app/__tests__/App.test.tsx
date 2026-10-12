@@ -158,6 +158,7 @@ describe('HU-12 · Create task: access permissions (E8)', () => {
     fetchMock.mockImplementation((url: string, options?: RequestInit) => {
       if (url.endsWith('/notifications/stream')) return Promise.resolve(module3Stream(options?.signal).response)
       if (url.includes('/teams')) return Promise.resolve(new Response('[]'))
+      if (url.includes('/organization/settings')) return Promise.resolve(Response.json({ timeZone: null, notificationsEnabled: true }))
       throw new Error(`Unexpected request: ${url}`)
     })
     persistSession({ ...module3User(), roles: ['COORDINATOR'] }, module3Tokens)

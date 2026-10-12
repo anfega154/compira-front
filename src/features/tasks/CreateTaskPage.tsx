@@ -1,8 +1,9 @@
-import { getTeams } from '../teams/teamsApi'
-import type { Team } from '../teams/teamsApi'
+import { getTeamMembers, getTeams } from '../teams/teamsApi'
+import type { Team, TeamMember } from '../teams/teamsApi'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ResponsibleCombobox } from './ResponsibleCombobox'
 import { TaskRequestError, createTask } from './tasksApi'
 
 const TITLE_MAX_LENGTH = 150
@@ -12,6 +13,9 @@ export function CreateTaskPage() {
   const navigate = useNavigate()
   const [teams, setTeams] = useState<Team[]>([])
   const [teamId, setTeamId] = useState('')
+  const [members, setMembers] = useState<TeamMember[]>([])
+  const [isLoadingMembers, setIsLoadingMembers] = useState(false)
+  const [membersFailed, setMembersFailed] = useState(false)
   useEffect(() => {
     const controller = new AbortController()
     void getTeams(controller.signal).then(response => {
@@ -21,6 +25,27 @@ export function CreateTaskPage() {
     })
     return () => controller.abort()
   }, [])
+
+  useEffect(() => {
+    setMembers([])
+    setMembersFailed(false)
+    if (!teamId) {
+      setIsLoadingMembers(false)
+      return
+    }
+    const controller = new AbortController()
+    setIsLoadingMembers(true)
+    getTeamMembers(teamId, controller.signal).then(response => {
+      if (!controller.signal.aborted) setMembers(response)
+    }).catch(requestError => {
+      if (controller.signal.aborted) return
+      setMembersFailed(true)
+      setError(requestError instanceof Error ? requestError.message : 'No se pudieron cargar los colaboradores del equipo.')
+    }).finally(() => {
+      if (!controller.signal.aborted) setIsLoadingMembers(false)
+    })
+    return () => controller.abort()
+  }, [teamId])
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -81,7 +106,10 @@ export function CreateTaskPage() {
           <div className="task-form-grid">
             <div className="task-form-field full">
               <label htmlFor="task-team">Equipo</label>
-              <select id="task-team" value={teamId} required disabled={isSubmitting} onChange={event => setTeamId(event.target.value)}>
+              <select id="task-team" value={teamId} required disabled={isSubmitting} onChange={event => {
+                setTeamId(event.target.value)
+                setResponsibleEmail('')
+              }}>
                 <option value="">Selecciona un equipo que coordinas</option>
                 {teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
               </select>
@@ -117,14 +145,15 @@ export function CreateTaskPage() {
           <p className="form-section-title">Asignación y programación</p>
           <div className="task-form-grid">
             <div className="task-form-field">
-              <label htmlFor="task-responsible">Responsable (correo)</label>
-              <input
+              <label htmlFor="task-responsible">Responsable (opcional)</label>
+              <ResponsibleCombobox
                 id="task-responsible"
-                type="email"
+                members={members}
                 value={responsibleEmail}
-                onChange={(e) => setResponsibleEmail(e.target.value)}
-                placeholder="colaborador@empresa.com"
-                disabled={isSubmitting}
+                onChange={setResponsibleEmail}
+                isLoading={isLoadingMembers}
+                disabled={!teamId || membersFailed || isSubmitting}
+                placeholder={teamId ? 'Buscar colaborador…' : 'Selecciona primero un equipo'}
               />
             </div>
 

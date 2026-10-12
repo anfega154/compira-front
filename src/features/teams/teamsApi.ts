@@ -40,3 +40,23 @@ export async function reassignTeamMember(teamId: string, email: string): Promise
 export async function linkExistingTask(teamId: string, taskId: string): Promise<void> {
   await authenticatedRequest(`${BASE}/${encodeURIComponent(teamId)}/tasks`, { method: 'POST', body: JSON.stringify({ taskId }) })
 }
+
+export type TeamMember = { id: string; email: string; firstName: string | null; lastName: string | null }
+
+function isNullableString(value: unknown): value is string | null {
+  return value === null || typeof value === 'string'
+}
+
+function isTeamMember(value: unknown): value is TeamMember {
+  return typeof value === 'object' && value !== null
+    && 'id' in value && typeof value.id === 'string'
+    && 'email' in value && typeof value.email === 'string'
+    && 'firstName' in value && isNullableString(value.firstName)
+    && 'lastName' in value && isNullableString(value.lastName)
+}
+
+export async function getTeamMembers(teamId: string, signal: AbortSignal): Promise<TeamMember[]> {
+  const members: unknown = await (await authenticatedRequest(`${BASE}/${encodeURIComponent(teamId)}/members`, { signal })).json()
+  if (!Array.isArray(members) || !members.every(isTeamMember)) throw new Error('Respuesta de miembros inválida.')
+  return members
+}

@@ -1932,3 +1932,108 @@ table caption {
 .sortable-header:hover .sort-indicator { opacity: 1; }
 th[aria-sort="ascending"] .sort-indicator,
 th[aria-sort="descending"] .sort-indicator { opacity: 1; color: var(--text-accent); }
+
+.combobox {
+  position: relative;
+}
+
+.combobox-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.combobox-control input {
+  width: 100%;
+  padding-right: 2.4rem;
+}
+
+.combobox-clear {
+  position: absolute;
+  right: 0.5rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.combobox-clear:hover,
+.combobox-clear:focus-visible {
+  color: var(--text-strong);
+  background: var(--surface-hover);
+}
+
+.combobox-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 16rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: var(--space-2);
+  list-style: none;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.combobox-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.combobox-option.active,
+.combobox-option:hover {
+  background: var(--surface-hover);
+}
+
+.combobox-option[aria-selected='true'] {
+  background: var(--accent-indigo-surface);
+}
+
+.combobox-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent-indigo-surface);
+  border: 1px solid var(--accent-indigo-border);
+  color: var(--accent-indigo-soft);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+}
+
+.combobox-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.combobox-name {
+  color: var(--text-strong);
+}
+
+.combobox-email {
+  color: var(--text-muted);
+  font-size: var(--fs-meta);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.combobox-empty {
+  padding: 0.6rem;
+  color: var(--text-muted);
+  font-size: var(--fs-meta);
+}

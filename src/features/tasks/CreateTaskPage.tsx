@@ -56,7 +56,11 @@ export function CreateTaskPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  const canSubmit = title.trim().length > 0 && teamId !== '' && !isSubmitting
+  const canSubmit = teamId !== ''
+    && title.trim().length > 0
+    && description.trim().length > 0
+    && dueDate !== ''
+    && !isSubmitting
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -70,8 +74,8 @@ export function CreateTaskPage() {
       const task = await createTask({
         teamId,
         title: title.trim(),
-        description: description.trim() ? description.trim() : undefined,
-        dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+        description: description.trim(),
+        dueDate: new Date(dueDate).toISOString(),
         responsibleEmail: responsibleEmail.trim() ? responsibleEmail.trim() : undefined,
       })
       setSuccess(`Tarea "${task.title}" creada correctamente.`)
@@ -136,8 +140,9 @@ export function CreateTaskPage() {
                 id="task-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Detalle de la tarea (opcional)"
+                placeholder="Describe qué hay que hacer"
                 maxLength={DESCRIPTION_MAX_LENGTH}
+                required
                 disabled={isSubmitting}
               />
             </div>
@@ -165,6 +170,7 @@ export function CreateTaskPage() {
                 type="datetime-local"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
+                required
                 disabled={isSubmitting}
               />
             </div>

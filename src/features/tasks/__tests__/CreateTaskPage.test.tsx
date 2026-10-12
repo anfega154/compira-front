@@ -403,6 +403,27 @@ describe('CreateTaskPage', () => {
     })
 
     /**
+     * Case: loading the members of a team fails and the user then picks another team that loads fine.
+     * Expected: the stale error is removed and the field is enabled again.
+     * Result: no alert is shown and the field is enabled after changing the team.
+     */
+    it('removes the members error and re-enables the field when another team loads fine', async () => {
+      vi.mocked(getTeams).mockResolvedValue([
+        { id: 'team-1', name: 'Operaciones', coordinatorUserId: 'c1', coordinatorEmail: 'coordinator@compira.co' },
+        { id: 'team-2', name: 'Soporte', coordinatorUserId: 'c1', coordinatorEmail: 'coordinator@compira.co' },
+      ])
+      vi.mocked(getTeamMembers).mockRejectedValueOnce(new Error('No se pudieron cargar los colaboradores.'))
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await selectTeam(user)
+      expect(await screen.findByRole('alert')).toHaveTextContent('No se pudieron cargar los colaboradores.')
+      await user.selectOptions(screen.getByLabelText('Equipo'), 'team-2')
+
+      await vi.waitFor(() => expect(screen.getByLabelText('Responsable (opcional)')).toBeEnabled())
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    })
+
+    /**
      * Case: the selected team has no collaborators.
      * Expected: "Este equipo aún no tiene colaboradores. Puedes crear la tarea sin responsable." is shown.
      * Result: the message appears when opening the field.

@@ -50,9 +50,22 @@ async function selectResponsible(user: ReturnType<typeof renderWithProviders>['u
   await user.click(await screen.findByRole('option', { name }))
 }
 
-async function selectTeam(user: ReturnType<typeof renderWithProviders>['user']) {
+type TestUser = ReturnType<typeof renderWithProviders>['user']
+
+async function selectTeam(user: TestUser) {
   await screen.findByRole('option', { name: 'Operaciones' })
   await user.selectOptions(screen.getByLabelText('Equipo'), 'team-1')
+}
+
+async function fillTaskFields(user: TestUser) {
+  await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+  await user.type(screen.getByLabelText('Descripción'), 'Informe mensual')
+  fireEvent.change(screen.getByLabelText('Fecha límite'), { target: { value: '2099-12-31T10:00' } })
+}
+
+async function fillRequiredFields(user: TestUser) {
+  await selectTeam(user)
+  await fillTaskFields(user)
 }
 
 beforeEach(() => {
@@ -124,7 +137,22 @@ describe('CreateTaskPage', () => {
     })
 
     /**
-     * Case: only team and title (description and date are optional in the component).
+     * Case: only team and title are filled in (description and due date are required).
+     * Expected: the "Crear tarea" button stays disabled and the task is not created.
+     * Result: the button is disabled and createTask is not called.
+     */
+    it('keeps submit disabled with only team and title', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await selectTeam(user)
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+
+      expect(screen.getByRole('button', { name: /crear tarea/i })).toBeDisabled()
+      expect(mockCreateTask).not.toHaveBeenCalled()
+    })
+
+    /**
+     * Case: team, title, description and due date are filled in.
      * Expected: the task is created and the success message is shown.
      * Result: createTask is called and a "creada correctamente" status appears.
      */
@@ -132,8 +160,7 @@ describe('CreateTaskPage', () => {
       mockCreateTask.mockResolvedValueOnce(createdTask)
       const { user } = renderWithProviders(<CreateTaskPage />)
 
-      await selectTeam(user)
-      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+      await fillRequiredFields(user)
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
       expect(mockCreateTask).toHaveBeenCalled()
@@ -151,8 +178,7 @@ describe('CreateTaskPage', () => {
       mockCreateTask.mockResolvedValueOnce({ ...createdTask, responsibleUserId: 'u1' })
       const { user } = renderWithProviders(<CreateTaskPage />)
 
-      await selectTeam(user)
-      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+      await fillRequiredFields(user)
       await selectResponsible(user, /Ana García/)
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
@@ -240,9 +266,77 @@ describe('CreateTaskPage', () => {
       expect(screen.getByLabelText('Descripción')).toHaveValue('b'.repeat(2000))
     })
 
-    // Pending in the component: canSubmit currently only requires team and title.
-    it.todo('disables submit when the description is empty')
-    it.todo('disables submit when the due date is empty')
+    /**
+     * Case: team, title and due date are filled in, but the description is empty or only whitespace.
+     * Expected: the "Crear tarea" button stays disabled.
+     * Result: the button is disabled and createTask is not called.
+     */
+    it.each(['', '   '])('disables submit when the description is %j', async (description) => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await selectTeam(user)
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+      if (description) await user.type(screen.getByLabelText('Descripción'), description)
+      fireEvent.change(screen.getByLabelText('Fecha límite'), { target: { value: '2099-12-31T10:00' } })
+
+      expect(screen.getByRole('button', { name: /crear tarea/i })).toBeDisabled()
+      expect(mockCreateTask).not.toHaveBeenCalled()
+    })
+
+    /**
+     * Case: team, title and description are filled in, but the due date is empty.
+     * Expected: the "Crear tarea" button stays disabled.
+     * Result: the button is disabled and createTask is not called.
+     */
+    it('disables submit when the due date is empty', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await selectTeam(user)
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+      await user.type(screen.getByLabelText('Descripción'), 'Informe mensual')
+
+      expect(screen.getByRole('button', { name: /crear tarea/i })).toBeDisabled()
+      expect(mockCreateTask).not.toHaveBeenCalled()
+    })
+
+    /**
+     * Case: the form is rendered.
+     * Expected: the description placeholder is not marked as optional and description and due date are required.
+     * Result: the placeholder has no "opcional" and both fields have the required attribute.
+     */
+    it('marks description and due date as required', () => {
+      renderWithProviders(<CreateTaskPage />)
+
+      expect(screen.getByLabelText('Descripción')).toHaveAttribute('placeholder', 'Describe qué hay que hacer')
+      expect(screen.getByLabelText('Descripción').getAttribute('placeholder')).not.toMatch(/opcional/i)
+      expect(screen.getByLabelText('Descripción')).toBeRequired()
+      expect(screen.getByLabelText('Fecha límite')).toBeRequired()
+    })
+
+    /**
+     * Case: all required fields are filled in and there is no responsible.
+     * Expected: the button is enabled and the payload carries the trimmed description and the ISO date.
+     * Result: createTask receives description, dueDate in ISO and responsibleEmail undefined.
+     */
+    it('enables submit and sends the trimmed description and ISO date when all required fields are filled', async () => {
+      mockCreateTask.mockResolvedValueOnce(createdTask)
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await selectTeam(user)
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+      await user.type(screen.getByLabelText('Descripción'), '  Informe mensual  ')
+      fireEvent.change(screen.getByLabelText('Fecha límite'), { target: { value: '2099-12-31T10:00' } })
+      expect(screen.getByRole('button', { name: /crear tarea/i })).toBeEnabled()
+      await user.click(screen.getByRole('button', { name: /crear tarea/i }))
+
+      expect(mockCreateTask).toHaveBeenCalledWith({
+        teamId: 'team-1',
+        title: 'Preparar informe',
+        description: 'Informe mensual',
+        dueDate: new Date('2099-12-31T10:00').toISOString(),
+        responsibleEmail: undefined,
+      })
+    })
     // Pending in the component: DESCRIPTION_MAX_LENGTH is 2000 and the HU asks for 150.
     it.todo('limits the description to 150 characters')
   })
@@ -267,8 +361,7 @@ describe('CreateTaskPage', () => {
       mockCreateTask.mockRejectedValueOnce(new TaskRequestError({ code, message }))
       const { user } = renderWithProviders(<CreateTaskPage />)
 
-      await selectTeam(user)
-      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+      await fillRequiredFields(user)
       await selectResponsible(user, /Luis Pérez/)
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
@@ -287,8 +380,7 @@ describe('CreateTaskPage', () => {
 
       const { user } = renderWithProviders(<CreateTaskPage />)
 
-      await selectTeam(user)
-      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+      await fillRequiredFields(user)
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
       expect(await screen.findByRole('alert')).toHaveTextContent('Solo un coordinador')
@@ -303,8 +395,7 @@ describe('CreateTaskPage', () => {
       mockCreateTask.mockRejectedValueOnce(new Error('boom'))
       const { user } = renderWithProviders(<CreateTaskPage />)
 
-      await selectTeam(user)
-      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+      await fillRequiredFields(user)
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
       expect(await screen.findByRole('alert')).toHaveTextContent('Ocurrió un error inesperado. Intenta nuevamente.')
@@ -372,8 +463,7 @@ describe('CreateTaskPage', () => {
       mockCreateTask.mockResolvedValueOnce({ ...createdTask, responsibleUserId: 'm1' })
       const { user } = renderWithProviders(<CreateTaskPage />)
 
-      await selectTeam(user)
-      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+      await fillRequiredFields(user)
       await selectResponsible(user, /Ana García/)
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
@@ -396,7 +486,7 @@ describe('CreateTaskPage', () => {
       expect(await screen.findByRole('alert')).toHaveTextContent('No se pudieron cargar los colaboradores.')
       expect(screen.getByLabelText('Responsable (opcional)')).toBeDisabled()
 
-      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+      await fillTaskFields(user)
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
       expect(mockCreateTask).toHaveBeenCalledWith(expect.objectContaining({ responsibleEmail: undefined }))

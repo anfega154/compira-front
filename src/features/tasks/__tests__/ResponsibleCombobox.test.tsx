@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { TeamMember } from '../../teams/teamsApi'
 import { ResponsibleCombobox } from '../ResponsibleCombobox'
 
@@ -16,6 +16,11 @@ function setup(props: Partial<React.ComponentProps<typeof ResponsibleCombobox>> 
   render(<ResponsibleCombobox id="responsible" members={members} value="" onChange={onChange} {...props} />)
   return { user, onChange, input: screen.getByRole('combobox') }
 }
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+  Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView')
+})
 
 /**
  * HU-12 · selector de responsable.
@@ -267,6 +272,38 @@ describe('ResponsibleCombobox', () => {
     expect(input).toBeDisabled()
     expect(input).toHaveAttribute('placeholder', 'Selecciona primero un equipo')
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  /**
+   * Case: the list is opened on a small screen (max-width 640 px).
+   * Expected: the field scrolls into view so the keyboard does not cover the list.
+   * Result: scrollIntoView is called on the input.
+   */
+  it('scrolls the field into view when opened on a small screen', async () => {
+    const scrollIntoView = vi.fn()
+    HTMLElement.prototype.scrollIntoView = scrollIntoView
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query === '(max-width: 640px)', media: query }))
+    const { user, input } = setup()
+
+    await user.click(input)
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center' })
+  })
+
+  /**
+   * Case: the list is opened on a wide screen.
+   * Expected: the page is not scrolled.
+   * Result: scrollIntoView is not called.
+   */
+  it('does not scroll the field on wide screens', async () => {
+    const scrollIntoView = vi.fn()
+    HTMLElement.prototype.scrollIntoView = scrollIntoView
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: false, media: query }))
+    const { user, input } = setup()
+
+    await user.click(input)
+
+    expect(scrollIntoView).not.toHaveBeenCalled()
   })
 
   /**

@@ -10,11 +10,23 @@ beforeEach(() => { vi.stubGlobal('fetch', fetchMock); persistSession(module3User
 afterEach(() => { vi.unstubAllGlobals(); vi.resetAllMocks(); vi.useRealTimers() })
 
 describe('NotificationCenter', () => {
+  it('exposes an accessible name with the unread count so the label can be hidden on small screens', async () => {
+    const stream = module3Stream()
+    fetchMock.mockResolvedValue(stream.response)
+    const { container } = renderWithProviders(<NotificationCenter />)
+    expect(container.querySelector('summary')).toHaveAttribute('aria-label', 'Notificaciones')
+
+    await act(async () => stream.send([module3Notification('ASSIGNED', '1'), module3Notification('REASSIGNED', '2')]))
+
+    expect(container.querySelector('summary')).toHaveAttribute('aria-label', 'Notificaciones, 2 sin leer')
+    expect(container.querySelector('summary .notification-label')).toHaveTextContent('Notificaciones')
+  })
+
   it('resets pagination when a burst would otherwise hide a gap in notification history', async () => {
     const stream = module3Stream()
     fetchMock.mockResolvedValue(stream.response)
     const { user } = renderWithProviders(<NotificationCenter />)
-    await user.click(screen.getByText('Notificaciones', { selector: 'summary' }))
+    await user.click(screen.getByText('Notificaciones', { selector: 'summary .notification-label' }))
     await act(async () => stream.send([module3Notification('REASSIGNED', '1')]))
     await act(async () => stream.send(Array.from({ length: 50 }, (_, index) => module3Notification('ASSIGNED', String(101 - index)))))
     expect(screen.queryByText('Se te reasignó la tarea')).not.toBeInTheDocument()
@@ -27,7 +39,7 @@ describe('NotificationCenter', () => {
     const page = Array.from({ length: 50 }, (_, index) => module3Notification('ASSIGNED', String(100 - index)))
     fetchMock.mockResolvedValueOnce(stream.response).mockResolvedValueOnce(new Response(JSON.stringify([module3Notification('REASSIGNED', '50')])))
     const { user } = renderWithProviders(<NotificationCenter />)
-    await user.click(screen.getByText('Notificaciones', { selector: 'summary' }))
+    await user.click(screen.getByText('Notificaciones', { selector: 'summary .notification-label' }))
     await act(async () => stream.send(page))
     await user.click(await screen.findByRole('button', { name: 'Cargar anteriores' }))
     expect(await screen.findByText('Se te reasignó la tarea')).toBeVisible()
@@ -41,7 +53,7 @@ describe('NotificationCenter', () => {
     const stream = module3Stream()
     fetchMock.mockResolvedValue(stream.response)
     const { user } = renderWithProviders(<NotificationCenter />)
-    await user.click(screen.getByText('Notificaciones', { selector: 'summary' }))
+    await user.click(screen.getByText('Notificaciones', { selector: 'summary .notification-label' }))
     expect(screen.getByRole('status')).toHaveTextContent('Conectando')
     await act(async () => stream.send([module3Notification()]))
     expect(await screen.findByText('Se te asignó la tarea')).toBeVisible()
@@ -88,7 +100,7 @@ describe('NotificationCenter', () => {
     const stream = module3Stream()
     fetchMock.mockResolvedValue(stream.response)
     const { user } = renderWithProviders(<NotificationCenter />)
-    await user.click(screen.getByText('Notificaciones', { selector: 'summary' }))
+    await user.click(screen.getByText('Notificaciones', { selector: 'summary .notification-label' }))
     await act(async () => stream.send([module3Notification('ASSIGNED', '2'), module3Notification('REASSIGNED', '1')]))
     expect(screen.getByLabelText('2 avisos sin leer')).toHaveTextContent('2')
 
@@ -102,7 +114,7 @@ describe('NotificationCenter', () => {
     const stream = module3Stream()
     fetchMock.mockResolvedValue(stream.response)
     const { user } = renderWithProviders(<NotificationCenter />)
-    await user.click(screen.getByText('Notificaciones', { selector: 'summary' }))
+    await user.click(screen.getByText('Notificaciones', { selector: 'summary .notification-label' }))
     await act(async () => stream.send([module3Notification('ASSIGNED', '2'), module3Notification('REASSIGNED', '1')]))
 
     await user.click(screen.getByRole('button', { name: 'Marcar todas como leídas' }))

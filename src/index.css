@@ -2054,3 +2054,67 @@ th[aria-sort="descending"] .sort-indicator { opacity: 1; color: var(--text-accen
 .char-counter.near-limit {
   color: var(--warning-soft);
 }
+
+.field-error {
+  margin: 0;
+  font-size: var(--fs-meta);
+  color: var(--danger-soft);
+}
+
+.task-form-field input[aria-invalid='true'] {
+  border-color: var(--danger-border);
+}
+
+.submit-area {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.submit-hint-wrapper {
+  position: relative;
+  display: inline-flex;
+  border-radius: var(--radius-md);
+}
+
+.submit-hint-wrapper:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-focus);
+}
+
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 30;
+  width: max-content;
+  max-width: min(22rem, 80vw);
+  padding: 0.5rem 0.75rem;
+  background: var(--surface-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-primary);
+  font-size: var(--fs-meta);
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.submit-hint-text {
+  display: none;
+  margin: 0;
+  font-size: var(--fs-meta);
+  color: var(--text-muted);
+}
+
+@media (hover: none), (max-width: 640px) {
+  .submit-hint-text {
+    display: block;
+  }
+
+  .tooltip {
+    display: none;
+  }
+}

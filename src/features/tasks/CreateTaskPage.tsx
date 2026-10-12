@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import { CharacterCounter } from '../../app/CharacterCounter'
 import { ResponsibleCombobox } from './ResponsibleCombobox'
 import { TaskRequestError, createTask } from './tasksApi'
+import { PAST_DUE_DATE_MESSAGE, getMinDueDate, getSubmitHint, isPastDueDate } from './taskFormRules'
 
 const TITLE_MAX_LENGTH = 150
 const DESCRIPTION_MAX_LENGTH = 2000
@@ -13,6 +14,7 @@ const DESCRIPTION_MAX_LENGTH = 2000
 export function CreateTaskPage() {
   const navigate = useNavigate()
   const [teams, setTeams] = useState<Team[]>([])
+  const [teamsLoaded, setTeamsLoaded] = useState(false)
   const [teamId, setTeamId] = useState('')
   const [members, setMembers] = useState<TeamMember[]>([])
   const [isLoadingMembers, setIsLoadingMembers] = useState(false)
@@ -20,7 +22,10 @@ export function CreateTaskPage() {
   useEffect(() => {
     const controller = new AbortController()
     void getTeams(controller.signal).then(response => {
-      if (!controller.signal.aborted) setTeams(response)
+      if (!controller.signal.aborted) {
+        setTeams(response)
+        setTeamsLoaded(true)
+      }
     }).catch(error => {
       if (!controller.signal.aborted) setError(error instanceof Error ? error.message : 'No se pudieron cargar los equipos.')
     })
@@ -57,15 +62,26 @@ export function CreateTaskPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
+  const [now, setNow] = useState(() => new Date())
+  const [isHintOpen, setIsHintOpen] = useState(false)
+
+  const isDueDatePast = isPastDueDate(dueDate, now)
   const canSubmit = teamId !== ''
     && title.trim().length > 0
     && description.trim().length > 0
     && dueDate !== ''
+    && !isDueDatePast
     && !isSubmitting
+  const submitHint = canSubmit || isSubmitting
+    ? null
+    : getSubmitHint({ teamId, title, description, dueDate, now, hasTeams: !teamsLoaded || teams.length > 0 })
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!canSubmit) return
+    const submittedAt = new Date()
+    setNow(submittedAt)
+    if (isPastDueDate(dueDate, submittedAt)) return
 
     setError(null)
     setSuccess(null)
@@ -175,9 +191,14 @@ export function CreateTaskPage() {
                 type="datetime-local"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
+                onFocus={() => setNow(new Date())}
+                min={getMinDueDate(now)}
+                aria-invalid={isDueDatePast}
+                aria-describedby={isDueDatePast ? 'task-due-date-error' : undefined}
                 required
                 disabled={isSubmitting}
               />
+              {isDueDatePast && <p id="task-due-date-error" className="field-error">{PAST_DUE_DATE_MESSAGE}</p>}
             </div>
           </div>
 
@@ -193,9 +214,27 @@ export function CreateTaskPage() {
             </div>
           )}
 
-          <button type="submit" className="primary-button" disabled={!canSubmit}>
-            {isSubmitting ? 'Creando tarea...' : 'Crear tarea'}
-          </button>
+          <div className="submit-area">
+            <span
+              className="submit-hint-wrapper"
+              tabIndex={submitHint ? 0 : undefined}
+              onMouseEnter={() => setIsHintOpen(true)}
+              onMouseLeave={() => setIsHintOpen(false)}
+              onFocus={() => setIsHintOpen(true)}
+              onBlur={() => setIsHintOpen(false)}
+            >
+              <button
+                type="submit"
+                className="primary-button"
+                disabled={!canSubmit}
+                aria-describedby={submitHint ? 'task-submit-hint' : undefined}
+              >
+                {isSubmitting ? 'Creando tarea...' : 'Crear tarea'}
+              </button>
+              {submitHint && isHintOpen && <span role="tooltip" className="tooltip">{submitHint}</span>}
+            </span>
+            {submitHint && <p id="task-submit-hint" className="submit-hint-text">{submitHint}</p>}
+          </div>
         </form>
       </article>
     </section>

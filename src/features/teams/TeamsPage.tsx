@@ -109,12 +109,13 @@ function TeamActions({ team, isAdministrator, onCoordinatorChanged }: { team: Te
       const selected = event.target.value
       if (selected === 'coordinator' || selected === 'member' || selected === 'reassign' || selected === 'task') { setAction(selected); setInput(''); setMessage(''); setError('') }
     }}>
-      {isAdministrator && <option value="coordinator">Cambiar coordinador</option>}<option value="member">Vincular colaborador sin equipo</option>{isAdministrator && <option value="reassign">Reasignar colaborador a este equipo</option>}<option value="task">Vincular tarea existente sin equipo</option>
+      {isAdministrator && <option value="coordinator">Cambiar coordinador</option>}<option value="member">Agregar colaborador al equipo</option>{isAdministrator && <option value="reassign">Reasignar colaborador a este equipo</option>}<option value="task">Vincular tarea existente sin equipo</option>
     </select></div>
     <div className="task-form-field"><label htmlFor="team-action-value">{action === 'task' ? 'Identificador de la tarea' : 'Correo del usuario'}</label>
       <input id="team-action-value" type={action === 'task' ? 'text' : 'email'} required value={input} disabled={isSaving} onChange={event => setInput(event.target.value)} /></div>
     {action === 'task' && <p className="page-copy">Las tareas anteriores no tienen equipo. Vincula primero al responsable y luego registra aquí el identificador de su tarea.</p>}
-    {action === 'reassign' && <p className="page-copy">Mueve a un colaborador existente a este equipo. El colaborador siempre conserva un equipo asignado.</p>}
+    {action === 'member' && <p className="page-copy">Un colaborador puede pertenecer a varios equipos a la vez. Si ya pertenece a este equipo, el sistema lo indicará.</p>}
+    {action === 'reassign' && <p className="page-copy">Mueve a un colaborador a este equipo. Deja de pertenecer a sus equipos anteriores y queda únicamente en este.</p>}
     <button className="primary-button" disabled={isSaving}>{isSaving ? 'Guardando…' : 'Guardar cambio'}</button>
     {message && <p className="feedback success" role="status">{message}</p>}{error && <p className="feedback error" role="alert">{error}</p>}
   </form>

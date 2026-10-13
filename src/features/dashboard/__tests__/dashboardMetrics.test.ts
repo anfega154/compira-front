@@ -13,6 +13,8 @@ function task(partial: Partial<Task> & { id: string; status: TaskStatus }): Task
     createdByUserId: 'creator',
     createdAt: '2026-06-01T00:00:00.000Z',
     updatedAt: '2026-06-01T00:00:00.000Z',
+    teamId: null,
+    teamName: null,
     ...partial,
   }
 }

@@ -88,7 +88,25 @@ describe('User management permissions', () => {
     renderWithProviders(<App />, { initialEntries: [path] })
 
     expect(await screen.findByRole('button', { name: action })).toBeVisible()
-    expect(screen.getByRole('link', { name: 'Registrar usuario' })).toBeVisible()
+    expect(screen.queryByRole('link', { name: 'Registrar usuario' })).not.toBeInTheDocument()
+  })
+
+  it('exposes user registration as an action inside the Users view', async () => {
+    fetchMock.mockImplementation((url: string, options?: RequestInit) => {
+      if (url.endsWith('/notifications/stream')) return Promise.resolve(module3Stream(options?.signal).response)
+      if (url.includes('/users')) return Promise.resolve(Response.json([]))
+      throw new Error(`Unexpected request: ${url}`)
+    })
+    persistSession({ ...module3User(), roles: ['ADMINISTRATOR'] }, module3Tokens)
+    const user = userEvent.setup()
+    renderWithProviders(<App />, { initialEntries: ['/users'] })
+
+    const registerButton = await screen.findByRole('button', { name: 'Registrar usuario' })
+    expect(registerButton).toBeVisible()
+    expect(screen.queryByRole('link', { name: 'Registrar usuario' })).not.toBeInTheDocument()
+
+    await user.click(registerButton)
+    expect(await screen.findByRole('button', { name: 'Crear usuario' })).toBeVisible()
   })
 })
 

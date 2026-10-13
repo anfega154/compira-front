@@ -58,6 +58,7 @@ export function AssignedTasksPage() {
   const [busyTaskId, setBusyTaskId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'ALL'>('ALL')
+  const [teamFilter, setTeamFilter] = useState<string>('ALL')
 
   const [observationTask, setObservationTask] = useState<Task | null>(null)
 
@@ -100,16 +101,28 @@ export function AssignedTasksPage() {
     setActionMessage('Observacion registrada.')
   }
 
+  const teamOptions = useMemo(() => {
+    const labels = new Map<string, string>()
+    for (const task of tasks) {
+      if (task.teamId) labels.set(task.teamId, task.teamName ?? task.teamId)
+    }
+    return Array.from(labels.entries())
+      .map(([id, label]) => ({ id, label }))
+      .sort((left, right) => left.label.localeCompare(right.label))
+  }, [tasks])
+
   const filteredTasks = useMemo(() => {
     const term = search.trim().toLowerCase()
     return tasks.filter((task) => {
       if (statusFilter !== 'ALL' && task.status !== statusFilter) return false
+      if (teamFilter !== 'ALL' && task.teamId !== teamFilter) return false
       if (term && !task.title.toLowerCase().includes(term)) return false
       return true
     })
-  }, [tasks, search, statusFilter])
+  }, [tasks, search, statusFilter, teamFilter])
 
-  const hasActiveFilters = search.trim() !== '' || statusFilter !== 'ALL'
+  const hasActiveFilters = search.trim() !== '' || statusFilter !== 'ALL' || teamFilter !== 'ALL'
+  const teamFilterLabel = teamOptions.find((option) => option.id === teamFilter)?.label ?? teamFilter
 
   return (
     <section className="page">
@@ -158,6 +171,19 @@ export function AssignedTasksPage() {
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
+          {teamOptions.length > 0 && (
+            <select
+              className="filter-select"
+              value={teamFilter}
+              onChange={(event) => setTeamFilter(event.target.value)}
+              aria-label="Filtrar por equipo"
+            >
+              <option value="ALL">Todos los equipos</option>
+              {teamOptions.map((option) => (
+                <option key={option.id} value={option.id}>{option.label}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         {hasActiveFilters && (
@@ -178,7 +204,15 @@ export function AssignedTasksPage() {
                 </button>
               </span>
             )}
-            <button type="button" className="filter-clear" onClick={() => { setSearch(''); setStatusFilter('ALL') }}>
+            {teamFilter !== 'ALL' && (
+              <span className="filter-chip">
+                Equipo: {teamFilterLabel}
+                <button type="button" aria-label="Quitar filtro de equipo" onClick={() => setTeamFilter('ALL')}>
+                  <svg viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+                </button>
+              </span>
+            )}
+            <button type="button" className="filter-clear" onClick={() => { setSearch(''); setStatusFilter('ALL'); setTeamFilter('ALL') }}>
               Limpiar filtros
             </button>
           </div>
@@ -189,23 +223,24 @@ export function AssignedTasksPage() {
             <thead>
               <tr>
                 <th>Titulo</th>
+                <th>Equipo</th>
                 <th>Estado</th>
                 <th>Fecha limite</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {loading ? <SkeletonRows columns={4} /> : null}
+              {loading ? <SkeletonRows columns={5} /> : null}
 
               {!loading && tasks.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="empty-state">No tienes tareas asignadas.</td>
+                  <td colSpan={5} className="empty-state">No tienes tareas asignadas.</td>
                 </tr>
               ) : null}
 
               {!loading && tasks.length > 0 && filteredTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="empty-state">Ninguna tarea coincide con los filtros aplicados.</td>
+                  <td colSpan={5} className="empty-state">Ninguna tarea coincide con los filtros aplicados.</td>
                 </tr>
               ) : null}
 
@@ -214,6 +249,7 @@ export function AssignedTasksPage() {
                   <td>
                     <Link to={`/tasks/${task.id}`}>{task.title}</Link>
                   </td>
+                  <td>{task.teamName ?? <span className="metric-foot">Sin equipo</span>}</td>
                   <td><TaskStatusBadge status={task.status} overdue={task.overdue} /></td>
                   <td>{formatDateTime(task.dueDate)}</td>
                   <td>

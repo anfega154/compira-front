@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { Modal } from '../../app/Modal'
 import type { UserRole } from '../auth/types'
@@ -51,6 +52,7 @@ export function UsersPage() {
 
 function UsersDirectory() {
   const { user: sessionUser } = useAuth()
+  const navigate = useNavigate()
   const headingRef = useRef<HTMLHeadingElement>(null)
   const [users, setUsers] = useState<OrganizationUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -103,9 +105,14 @@ function UsersDirectory() {
           <h2 ref={headingRef} tabIndex={-1}>Usuarios</h2>
           <p className="page-copy">Consulta los usuarios de la organización y administra sus roles o restablece su contraseña.</p>
         </div>
-        <button type="button" className="secondary-button" onClick={() => void loadUsers()} disabled={isLoading}>
-          {isLoading ? 'Consultando…' : 'Recargar'}
-        </button>
+        <div className="page-header-actions">
+          <button type="button" className="primary-button" onClick={() => navigate('/users/register')}>
+            Registrar usuario
+          </button>
+          <button type="button" className="secondary-button" onClick={() => void loadUsers()} disabled={isLoading}>
+            {isLoading ? 'Consultando…' : 'Recargar'}
+          </button>
+        </div>
       </header>
 
       {loadError ? <div className="feedback error" role="alert">{loadError}</div> : null}

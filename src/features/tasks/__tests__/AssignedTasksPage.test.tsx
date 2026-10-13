@@ -39,6 +39,8 @@ function buildTask(overrides: Partial<Task> = {}): Task {
     createdByUserId: 'c1',
     createdAt: '',
     updatedAt: '',
+    teamId: null,
+    teamName: null,
     ...overrides,
   }
 }
@@ -67,6 +69,36 @@ describe('AssignedTasksPage', () => {
     renderWithProviders(<AssignedTasksPage />)
 
     expect(await screen.findByText(/no tienes tareas asignadas/i)).toBeInTheDocument()
+  })
+
+  it('filters assigned tasks by team when the collaborator belongs to several teams', async () => {
+    mockGetAssigned.mockResolvedValueOnce([
+      buildTask({ id: 't1', title: 'Tarea de Operaciones', teamId: 'team-1', teamName: 'Operaciones' }),
+      buildTask({ id: 't2', title: 'Tarea de Soporte', teamId: 'team-2', teamName: 'Soporte' }),
+    ])
+
+    const { user } = renderWithProviders(<AssignedTasksPage />)
+
+    expect(await screen.findByText('Tarea de Operaciones')).toBeInTheDocument()
+    const teamSelect = screen.getByLabelText('Filtrar por equipo')
+    expect(within(teamSelect).getByRole('option', { name: 'Operaciones' })).toBeInTheDocument()
+    expect(within(teamSelect).getByRole('option', { name: 'Soporte' })).toBeInTheDocument()
+
+    await user.selectOptions(teamSelect, 'team-2')
+    expect(screen.queryByText('Tarea de Operaciones')).not.toBeInTheDocument()
+    expect(screen.getByText('Tarea de Soporte')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Limpiar filtros' }))
+    expect(screen.getByText('Tarea de Operaciones')).toBeInTheDocument()
+  })
+
+  it('does not render the team filter when no task has a team', async () => {
+    mockGetAssigned.mockResolvedValueOnce([buildTask()])
+
+    renderWithProviders(<AssignedTasksPage />)
+
+    await screen.findByText('Preparar informe')
+    expect(screen.queryByLabelText('Filtrar por equipo')).not.toBeInTheDocument()
   })
 
   it('advances the status of a pending task', async () => {

@@ -28,6 +28,8 @@ export type Task = {
   createdByUserId: string
   createdAt: string
   updatedAt: string
+  teamId: string | null
+  teamName: string | null
 }
 
 export type TaskObservation = {

@@ -7,9 +7,10 @@ import { useNavigate } from 'react-router-dom'
 import { CharacterCounter } from '../../app/CharacterCounter'
 import { Toast } from '../../app/Toast'
 import { ResponsibleCombobox } from './ResponsibleCombobox'
+import { DueDatePicker } from './DueDatePicker'
 import { TaskRequestError, createTask } from './tasksApi'
 import { formatTimeZoneLabel, getDeviceTimeZone } from './timeZone'
-import { PAST_DUE_DATE_MESSAGE, getMinDueDate, getSubmitHint, isPastDueDate } from './taskFormRules'
+import { PAST_DUE_DATE_MESSAGE, getSubmitHint, isPastDueDate } from './taskFormRules'
 
 const TITLE_MAX_LENGTH = 150
 const DESCRIPTION_MAX_LENGTH = 2000
@@ -206,17 +207,15 @@ export function CreateTaskPage() {
 
             <div className="task-form-field">
               <label htmlFor="task-due-date">Fecha límite</label>
-              <input
+              <DueDatePicker
                 id="task-due-date"
-                type="datetime-local"
                 value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                onFocus={() => setNow(new Date())}
-                min={getMinDueDate(now)}
-                aria-invalid={isDueDatePast}
-                aria-describedby={isDueDatePast ? 'task-due-date-error' : undefined}
-                required
+                onChange={setDueDate}
+                now={now}
                 disabled={isSubmitting}
+                invalid={isDueDatePast}
+                describedBy={isDueDatePast ? 'task-due-date-error' : undefined}
+                onFocus={() => setNow(new Date())}
               />
               {isDueDatePast && <p id="task-due-date-error" className="field-error">{PAST_DUE_DATE_MESSAGE}</p>}
               <p className="field-hint">Hora de tu dispositivo: {formatTimeZoneLabel(deviceTimeZone, now)}</p>

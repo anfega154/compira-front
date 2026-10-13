@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderWithProviders } from '../../../test/render'
 import { CreateTaskPage } from '../CreateTaskPage'
@@ -44,6 +44,8 @@ const createdTask = {
   createdByUserId: 'c1',
   createdAt: '',
   updatedAt: '',
+  teamId: null,
+  teamName: null,
 }
 
 const teamMembers = [
@@ -394,7 +396,8 @@ describe('CreateTaskPage', () => {
       expect(screen.getByLabelText('Descripción')).toHaveAttribute('placeholder', 'Describe qué hay que hacer')
       expect(screen.getByLabelText('Descripción').getAttribute('placeholder')).not.toMatch(/opcional/i)
       expect(screen.getByLabelText('Descripción')).toBeRequired()
-      expect(screen.getByLabelText('Fecha límite')).toBeRequired()
+      expect(screen.getByLabelText('Día')).toBeInTheDocument()
+      expect(screen.getByLabelText('Hora')).toBeInTheDocument()
     })
 
     /**
@@ -502,7 +505,7 @@ describe('CreateTaskPage', () => {
       freezeTime()
       renderWithProviders(<CreateTaskPage />)
 
-      expect(screen.getByLabelText('Fecha límite')).toHaveAttribute('min', '2026-10-11T10:01')
+      expect(screen.getByLabelText('Día')).toHaveAttribute('min', '2026-10-11')
     })
 
     /**
@@ -513,11 +516,11 @@ describe('CreateTaskPage', () => {
     it('recalculates the min attribute when the due date field is focused', () => {
       freezeTime()
       renderWithProviders(<CreateTaskPage />)
-      vi.setSystemTime(new Date('2026-10-11T10:30:10'))
+      vi.setSystemTime(new Date('2026-10-12T00:10:00'))
 
-      fireEvent.focus(screen.getByLabelText('Fecha límite'))
+      fireEvent.focus(screen.getByLabelText('Día'))
 
-      expect(screen.getByLabelText('Fecha límite')).toHaveAttribute('min', '2026-10-11T10:31')
+      expect(screen.getByLabelText('Día')).toHaveAttribute('min', '2026-10-12')
     })
 
     /**
@@ -979,7 +982,7 @@ describe('CreateTaskPage', () => {
       await user.type(screen.getByLabelText('Título'), 'Preparar informe')
 
       expect(document.querySelector('.field-hint')).toHaveTextContent('Necesitas un equipo asignado por el Administrador para crear tareas.')
-      expect(screen.getAllByRole('option')).toHaveLength(1)
+      expect(within(screen.getByLabelText('Equipo')).getAllByRole('option')).toHaveLength(1)
       expect(screen.getByRole('button', { name: /crear tarea/i })).toBeDisabled()
     })
 

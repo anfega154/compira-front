@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import {
   TaskRequestError,
   approveTask,
+  assignTask,
   cancelTask,
   getManagedTasks,
   getTaskIndicators,
@@ -12,6 +13,8 @@ import { TaskActionModal } from './TaskActionModal'
 import { TaskStatusBadge } from './TaskStatusBadge'
 import { TASK_STATUS_LABELS, formatDateTime } from './taskLabels'
 import type { Task, TaskIndicators, TaskStatus } from './types'
+import { getTeamMembers } from '../teams/teamsApi'
+import type { TeamMember } from '../teams/teamsApi'
 import { useAuth } from '../auth/useAuth'
 import { canManageTaskLifecycle } from '../auth/permissions'
 
@@ -29,7 +32,10 @@ export function TasksPage() {
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [busyTaskId, setBusyTaskId] = useState<string | null>(null)
 
-  const [taskAction, setTaskAction] = useState<{ task: Task; action: 'reassign' | 'cancel' } | null>(null)
+  const [taskAction, setTaskAction] = useState<{ task: Task; action: 'reassign' | 'assign' | 'cancel' } | null>(null)
+  const [actionMembers, setActionMembers] = useState<TeamMember[]>([])
+  const [isLoadingMembers, setIsLoadingMembers] = useState(false)
+  const [membersFailed, setMembersFailed] = useState(false)
 
   const [statusFilter, setStatusFilter] = useState<TaskStatus | ''>('')
   const [responsibleFilter, setResponsibleFilter] = useState<string>('')
@@ -40,6 +46,33 @@ export function TasksPage() {
   useEffect(() => {
     void loadTasks()
   }, [])
+
+  useEffect(() => {
+    setActionMembers([])
+    setMembersFailed(false)
+    if (!taskAction || taskAction.action === 'cancel') {
+      setIsLoadingMembers(false)
+      return
+    }
+    const teamId = taskAction.task.teamId
+    if (!teamId) {
+      setIsLoadingMembers(false)
+      return
+    }
+    const controller = new AbortController()
+    setIsLoadingMembers(true)
+    getTeamMembers(teamId, controller.signal)
+      .then(response => {
+        if (!controller.signal.aborted) setActionMembers(response)
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setMembersFailed(true)
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoadingMembers(false)
+      })
+    return () => controller.abort()
+  }, [taskAction])
 
   async function loadTasks() {
     setLoading(true)
@@ -70,10 +103,13 @@ export function TasksPage() {
     }
   }
 
-  async function handleTaskAction(taskId: string, action: 'reassign' | 'cancel', value: string) {
+  async function handleTaskAction(taskId: string, action: 'reassign' | 'assign' | 'cancel', value: string) {
     setActionMessage(null)
     setError(null)
-    if (action === 'reassign') {
+    if (action === 'assign') {
+      await assignTask(taskId, { responsibleEmail: value })
+      setActionMessage('Tarea asignada.')
+    } else if (action === 'reassign') {
       await reassignTask(taskId, { newResponsibleEmail: value })
       setActionMessage('Tarea reasignada.')
     } else {
@@ -237,10 +273,10 @@ export function TasksPage() {
                       <button
                         type="button"
                         className="task-action-button"
-                        onClick={() => setTaskAction({ task, action: 'reassign' })}
+                        onClick={() => setTaskAction({ task, action: task.responsibleUserId ? 'reassign' : 'assign' })}
                         disabled={busyTaskId === task.id || task.status === 'CLOSED' || task.status === 'CANCELLED'}
                       >
-                        Reasignar
+                        {task.responsibleUserId ? 'Reasignar' : 'Asignar'}
                       </button>
                       <button
                         type="button"
@@ -269,6 +305,9 @@ export function TasksPage() {
       </article>
       {taskAction && <TaskActionModal action={taskAction.action} taskTitle={taskAction.task.title}
         fallbackFocusRef={headingRef}
+        members={actionMembers}
+        isLoadingMembers={isLoadingMembers}
+        membersFailed={membersFailed}
         onSubmit={value => handleTaskAction(taskAction.task.id, taskAction.action, value)}
         onClose={() => setTaskAction(null)} />}
     </section>

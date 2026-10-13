@@ -17,6 +17,7 @@ vi.mock('../tasksApi', () => ({
   approveTask: vi.fn(),
   cancelTask: vi.fn(),
   reassignTask: vi.fn(),
+  assignTask: vi.fn(),
   TaskRequestError: class TaskRequestError extends Error {
     code: string
     constructor(apiError: { code: string; message: string }) {
@@ -26,11 +27,23 @@ vi.mock('../tasksApi', () => ({
   },
 }))
 
-import { approveTask, getManagedTasks, getTaskIndicators, reassignTask, cancelTask, TaskRequestError } from '../tasksApi'
+vi.mock('../../teams/teamsApi', () => ({
+  getTeamMembers: vi.fn(),
+}))
+
+import { approveTask, getManagedTasks, getTaskIndicators, reassignTask, assignTask, cancelTask, TaskRequestError } from '../tasksApi'
+import { getTeamMembers } from '../../teams/teamsApi'
+import type { TeamMember } from '../../teams/teamsApi'
 
 const mockGetManaged = vi.mocked(getManagedTasks)
 const mockGetIndicators = vi.mocked(getTaskIndicators)
 const mockApprove = vi.mocked(approveTask)
+const mockGetTeamMembers = vi.mocked(getTeamMembers)
+
+const teamMembers: TeamMember[] = [
+  { id: 'm1', email: 'nuevo@compira.co', firstName: 'Nuevo', lastName: 'Responsable' },
+  { id: 'm2', email: 'otro@compira.co', firstName: 'Otro', lastName: 'Colaborador' },
+]
 
 function buildTask(overrides: Partial<Task> = {}): Task {
   return {
@@ -54,6 +67,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   persistSession(module3User('COORDINATOR'), module3Tokens)
   mockGetIndicators.mockResolvedValue({ totalTasks: 0, overdueCount: 0, dueSoonCount: 0, closedCount: 0, closedOnTimeCount: 0, compliancePercentage: null, workloadByAssignee: [], assignees: [] })
+  mockGetTeamMembers.mockResolvedValue(teamMembers)
 })
 
 afterEach(() => {
@@ -198,15 +212,33 @@ describe('TasksPage', () => {
 
 
 describe('Task action modals', () => {
-  it('reassigns through an application dialog and restores focus on dismissal', async () => {
-    mockGetManaged.mockResolvedValue([buildTask()])
-    vi.mocked(reassignTask).mockResolvedValue(buildTask())
+  it('shows "Asignar" when a task has no responsible and assigns through the combobox', async () => {
+    mockGetManaged.mockResolvedValue([buildTask({ responsibleUserId: null, teamId: 'team-1' })])
+    vi.mocked(assignTask).mockResolvedValue(buildTask({ responsibleUserId: 'r1', teamId: 'team-1' }))
+    const { user } = renderWithProviders(<TasksPage />)
+    const trigger = await screen.findByRole('button', { name: 'Asignar', exact: true })
+    await user.click(trigger)
+    const dialog = screen.getByRole('dialog', { name: 'Asignar tarea' })
+    const combobox = within(dialog).getByRole('combobox')
+    await user.click(combobox)
+    await user.click(await within(dialog).findByRole('option', { name: /Nuevo Responsable/ }))
+    await user.click(within(dialog).getByRole('button', { name: 'Asignar tarea' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('Tarea asignada.')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(assignTask).toHaveBeenCalledWith('t1', { responsibleEmail: 'nuevo@compira.co' })
+    expect(trigger).toHaveFocus()
+  })
+
+  it('shows "Reasignar" when a task has a responsible and reassigns through the combobox', async () => {
+    mockGetManaged.mockResolvedValue([buildTask({ responsibleUserId: 'r1', teamId: 'team-1' })])
+    vi.mocked(reassignTask).mockResolvedValue(buildTask({ teamId: 'team-1' }))
     const { user } = renderWithProviders(<TasksPage />)
     const trigger = await screen.findByRole('button', { name: 'Reasignar', exact: true })
     await user.click(trigger)
     const dialog = screen.getByRole('dialog', { name: 'Reasignar tarea' })
-    expect(within(dialog).getByLabelText('Correo del nuevo responsable')).toHaveFocus()
-    await user.type(within(dialog).getByLabelText('Correo del nuevo responsable'), 'nuevo@compira.co')
+    const combobox = within(dialog).getByRole('combobox')
+    await user.click(combobox)
+    await user.click(await within(dialog).findByRole('option', { name: /Nuevo Responsable/ }))
     await user.click(within(dialog).getByRole('button', { name: 'Reasignar tarea' }))
     expect(await screen.findByRole('status')).toHaveTextContent('Tarea reasignada.')
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
@@ -214,25 +246,22 @@ describe('Task action modals', () => {
     expect(trigger).toHaveFocus()
   })
 
-  it('validates email and preserves entered data after a failed reassignment', async () => {
-    mockGetManaged.mockResolvedValue([buildTask()])
-    vi.mocked(reassignTask).mockRejectedValueOnce(new TaskRequestError({ code: 'TASK_001', message: 'El colaborador no pertenece al equipo.' }))
-      .mockResolvedValueOnce(buildTask())
+  it('keeps the submit disabled until a collaborator is chosen and surfaces backend errors', async () => {
+    mockGetManaged.mockResolvedValue([buildTask({ responsibleUserId: 'r1', teamId: 'team-1' })])
+    vi.mocked(reassignTask)
+      .mockRejectedValueOnce(new TaskRequestError({ code: 'TASK_001', message: 'El colaborador no pertenece al equipo.' }))
+      .mockResolvedValueOnce(buildTask({ teamId: 'team-1' }))
     const { user } = renderWithProviders(<TasksPage />)
     await user.click(await screen.findByRole('button', { name: 'Reasignar', exact: true }))
-    const field = screen.getByLabelText('Correo del nuevo responsable')
-    const submit = screen.getByRole('button', { name: 'Reasignar tarea' })
+    const dialog = screen.getByRole('dialog', { name: 'Reasignar tarea' })
+    const submit = within(dialog).getByRole('button', { name: 'Reasignar tarea' })
     expect(submit).toBeDisabled()
-    await user.type(field, 'invalido')
-    await user.click(submit)
-    expect(screen.getByRole('alert')).toHaveTextContent('Ingresa un correo electrónico válido.')
-    expect(reassignTask).not.toHaveBeenCalled()
-    await user.clear(field)
-    await user.type(field, 'nuevo@compira.co')
-    await user.click(submit)
-    expect(await screen.findByRole('alert')).toHaveTextContent('El colaborador no pertenece al equipo.')
-    expect(field).toHaveValue('nuevo@compira.co')
+    const combobox = within(dialog).getByRole('combobox')
+    await user.click(combobox)
+    await user.click(await within(dialog).findByRole('option', { name: /Nuevo Responsable/ }))
     expect(submit).toBeEnabled()
+    await user.click(submit)
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('El colaborador no pertenece al equipo.')
     await user.click(submit)
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })

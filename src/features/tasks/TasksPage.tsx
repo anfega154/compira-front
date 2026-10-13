@@ -33,6 +33,7 @@ export function TasksPage() {
 
   const [statusFilter, setStatusFilter] = useState<TaskStatus | ''>('')
   const [responsibleFilter, setResponsibleFilter] = useState<string>('')
+  const [teamFilter, setTeamFilter] = useState<string>('')
   const [dueFrom, setDueFrom] = useState<string>('')
   const [dueTo, setDueTo] = useState<string>('')
 
@@ -95,6 +96,14 @@ export function TasksPage() {
   ).map(id => ({ id, label: responsibleLabels.get(id) ?? id }))
     .sort((left, right) => left.label.localeCompare(right.label))
 
+  const teamLabels = new Map<string, string>()
+  for (const task of tasks) {
+    if (task.teamId) teamLabels.set(task.teamId, task.teamName ?? task.teamId)
+  }
+  const teamOptions = Array.from(teamLabels.entries())
+    .map(([id, label]) => ({ id, label }))
+    .sort((left, right) => left.label.localeCompare(right.label))
+
   const filteredTasks = tasks.filter(task => {
     if (statusFilter === 'DELAYED') {
       if (!task.overdue) return false
@@ -102,16 +111,18 @@ export function TasksPage() {
       return false
     }
     if (responsibleFilter && task.responsibleUserId !== responsibleFilter) return false
+    if (teamFilter && task.teamId !== teamFilter) return false
     if (dueFrom && (!task.dueDate || task.dueDate < dueFrom)) return false
     if (dueTo && (!task.dueDate || task.dueDate > `${dueTo}T23:59:59`)) return false
     return true
   })
 
-  const hasActiveFilters = Boolean(statusFilter || responsibleFilter || dueFrom || dueTo)
+  const hasActiveFilters = Boolean(statusFilter || responsibleFilter || teamFilter || dueFrom || dueTo)
 
   function clearFilters() {
     setStatusFilter('')
     setResponsibleFilter('')
+    setTeamFilter('')
     setDueFrom('')
     setDueTo('')
   }
@@ -167,6 +178,15 @@ export function TasksPage() {
             </select>
           </div>
           <div className="task-form-field">
+            <label htmlFor="filter-team">Equipo</label>
+            <select id="filter-team" value={teamFilter} onChange={event => setTeamFilter(event.target.value)} disabled={teamOptions.length === 0}>
+              <option value="">Todos</option>
+              {teamOptions.map(option => (
+                <option key={option.id} value={option.id}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="task-form-field">
             <label htmlFor="filter-due-from">Vence desde</label>
             <input id="filter-due-from" type="date" value={dueFrom} onChange={event => setDueFrom(event.target.value)} />
           </div>
@@ -184,6 +204,7 @@ export function TasksPage() {
             <thead>
               <tr>
                 <th>Titulo</th>
+                <th>Equipo</th>
                 <th>Estado</th>
                 <th>Fecha limite</th>
                 {canManageTasks && <th>Acciones</th>}
@@ -192,13 +213,13 @@ export function TasksPage() {
             <tbody>
               {!loading && tasks.length === 0 ? (
                 <tr>
-                  <td colSpan={canManageTasks ? 4 : 3} className="empty-state">Todavia no hay tareas registradas.</td>
+                  <td colSpan={canManageTasks ? 5 : 4} className="empty-state">Todavia no hay tareas registradas.</td>
                 </tr>
               ) : null}
 
               {!loading && tasks.length > 0 && filteredTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={canManageTasks ? 4 : 3} className="empty-state">Ninguna tarea coincide con los filtros aplicados.</td>
+                  <td colSpan={canManageTasks ? 5 : 4} className="empty-state">Ninguna tarea coincide con los filtros aplicados.</td>
                 </tr>
               ) : null}
 
@@ -207,6 +228,7 @@ export function TasksPage() {
                   <td>
                     <Link to={`/tasks/${task.id}`}>{task.title}</Link>
                   </td>
+                  <td>{task.teamName ?? <span className="metric-foot">Sin equipo</span>}</td>
                   <td><TaskStatusBadge status={task.status} overdue={task.overdue} /></td>
                   <td>{formatDateTime(task.dueDate)}</td>
                   {canManageTasks ? (

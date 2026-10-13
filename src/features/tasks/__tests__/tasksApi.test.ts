@@ -71,6 +71,8 @@ const sampleTask = {
   createdByUserId: 'u1',
   createdAt: '',
   updatedAt: '',
+  teamId: null,
+  teamName: null,
 }
 
 describe('tasksApi', () => {

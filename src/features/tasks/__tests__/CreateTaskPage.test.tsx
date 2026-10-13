@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderWithProviders } from '../../../test/render'
 import { CreateTaskPage } from '../CreateTaskPage'
@@ -21,8 +21,14 @@ vi.mock('../tasksApi', () => ({
   },
 }))
 
-vi.mock('../../teams/teamsApi', () => ({ getTeams: vi.fn() }))
-import { getTeams } from '../../teams/teamsApi'
+vi.mock('../../teams/teamsApi', () => ({ getTeams: vi.fn(), getTeamMembers: vi.fn() }))
+import { getTeamMembers, getTeams } from '../../teams/teamsApi'
+vi.mock('../../organization/organizationApi', () => ({ getOrganizationSettings: vi.fn() }))
+import { getOrganizationSettings } from '../../organization/organizationApi'
+vi.mock('../timeZone', async () => {
+  const actual = await vi.importActual<typeof import('../timeZone')>('../timeZone')
+  return { ...actual, getDeviceTimeZone: () => 'America/Bogota' }
+})
 import { createTask } from '../tasksApi'
 
 const mockCreateTask = vi.mocked(createTask)
@@ -40,13 +46,38 @@ const createdTask = {
   updatedAt: '',
 }
 
-async function selectTeam(user: ReturnType<typeof renderWithProviders>['user']) {
+const teamMembers = [
+  { id: 'm1', email: 'ana@compira.co', firstName: 'Ana', lastName: 'García' },
+  { id: 'm2', email: 'luis@compira.co', firstName: 'Luis', lastName: 'Pérez' },
+]
+
+async function selectResponsible(user: ReturnType<typeof renderWithProviders>['user'], name: RegExp) {
+  await user.click(screen.getByLabelText('Responsable (opcional)'))
+  await user.click(await screen.findByRole('option', { name }))
+}
+
+type TestUser = ReturnType<typeof renderWithProviders>['user']
+
+async function selectTeam(user: TestUser) {
   await screen.findByRole('option', { name: 'Operaciones' })
   await user.selectOptions(screen.getByLabelText('Equipo'), 'team-1')
 }
 
+async function fillTaskFields(user: TestUser) {
+  await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+  await user.type(screen.getByLabelText('Descripción'), 'Informe mensual')
+  fireEvent.change(screen.getByLabelText('Fecha límite'), { target: { value: '2099-12-31T10:00' } })
+}
+
+async function fillRequiredFields(user: TestUser) {
+  await selectTeam(user)
+  await fillTaskFields(user)
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.mocked(getTeamMembers).mockResolvedValue(teamMembers)
+  vi.mocked(getOrganizationSettings).mockResolvedValue({ timeZone: null, notificationsEnabled: true })
   vi.mocked(getTeams).mockResolvedValue([{ id: 'team-1', name: 'Operaciones', coordinatorUserId: 'c1', coordinatorEmail: 'coordinator@compira.co' }])
 })
 
@@ -63,12 +94,12 @@ describe('CreateTaskPage', () => {
   /**
    * Case: the coordinator opens the "Crear tarea" screen.
    * Expected: the form fields and the submit button are shown.
-   * Result: the Titulo and Descripcion fields and the "Crear tarea" button exist.
+   * Result: the Título and Descripción fields and the "Crear tarea" button exist.
    */
   it('renders the create task form', () => {
     renderWithProviders(<CreateTaskPage />)
-    expect(screen.getByLabelText('Titulo')).toBeInTheDocument()
-    expect(screen.getByLabelText('Descripcion')).toBeInTheDocument()
+    expect(screen.getByLabelText('Título')).toBeInTheDocument()
+    expect(screen.getByLabelText('Descripción')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /crear tarea/i })).toBeInTheDocument()
   })
 
@@ -93,9 +124,9 @@ describe('CreateTaskPage', () => {
       const { user } = renderWithProviders(<CreateTaskPage />)
 
       await selectTeam(user)
-      await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
-      await user.type(screen.getByLabelText('Descripcion'), 'Informe mensual')
-      fireEvent.change(screen.getByLabelText('Fecha limite'), { target: { value: '2099-12-31T10:00' } })
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+      await user.type(screen.getByLabelText('Descripción'), 'Informe mensual')
+      fireEvent.change(screen.getByLabelText('Fecha límite'), { target: { value: '2099-12-31T10:00' } })
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
       expect(mockCreateTask).toHaveBeenCalledWith({
@@ -106,14 +137,29 @@ describe('CreateTaskPage', () => {
         responsibleEmail: undefined,
       })
       expect(await screen.findByRole('status')).toHaveTextContent('Tarea "Preparar informe" creada correctamente.')
-      expect(screen.getByLabelText('Titulo')).toHaveValue('')
-      expect(screen.getByLabelText('Descripcion')).toHaveValue('')
-      expect(screen.getByLabelText('Fecha limite')).toHaveValue('')
-      expect(screen.getByLabelText('Responsable (correo)')).toHaveValue('')
+      expect(screen.getByLabelText('Título')).toHaveValue('')
+      expect(screen.getByLabelText('Descripción')).toHaveValue('')
+      expect(screen.getByLabelText('Fecha límite')).toHaveValue('')
+      expect(screen.getByLabelText('Responsable (opcional)')).toHaveValue('')
     })
 
     /**
-     * Case: only team and title (description and date are optional in the component).
+     * Case: only team and title are filled in (description and due date are required).
+     * Expected: the "Crear tarea" button stays disabled and the task is not created.
+     * Result: the button is disabled and createTask is not called.
+     */
+    it('keeps submit disabled with only team and title', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await selectTeam(user)
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+
+      expect(screen.getByRole('button', { name: /crear tarea/i })).toBeDisabled()
+      expect(mockCreateTask).not.toHaveBeenCalled()
+    })
+
+    /**
+     * Case: team, title, description and due date are filled in.
      * Expected: the task is created and the success message is shown.
      * Result: createTask is called and a "creada correctamente" status appears.
      */
@@ -121,8 +167,7 @@ describe('CreateTaskPage', () => {
       mockCreateTask.mockResolvedValueOnce(createdTask)
       const { user } = renderWithProviders(<CreateTaskPage />)
 
-      await selectTeam(user)
-      await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
+      await fillRequiredFields(user)
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
       expect(mockCreateTask).toHaveBeenCalled()
@@ -130,19 +175,95 @@ describe('CreateTaskPage', () => {
     })
   })
 
+  describe('success notice', () => {
+    async function createTaskSuccessfully() {
+      mockCreateTask.mockResolvedValueOnce(createdTask)
+      const rendered = renderWithProviders(<CreateTaskPage />)
+      await fillRequiredFields(rendered.user)
+      await rendered.user.click(screen.getByRole('button', { name: /crear tarea/i }))
+      await screen.findByRole('status')
+      return rendered
+    }
+
+    /**
+     * Case: the task was created.
+     * Expected: a notice with the exact message and a "Ver tarea" link to the task detail.
+     * Result: the status shows the message and the link points to /tasks/t1.
+     */
+    it('shows the exact message with a link to the created task', async () => {
+      await createTaskSuccessfully()
+
+      expect(screen.getByRole('status')).toHaveTextContent('Tarea "Preparar informe" creada correctamente.')
+      expect(screen.getByRole('link', { name: 'Ver tarea' })).toHaveAttribute('href', '/tasks/t1')
+    })
+
+    /**
+     * Case: the task was created and the user closes the notice with the button.
+     * Expected: the notice disappears.
+     * Result: no status is rendered after clicking the close button.
+     */
+    it('closes the notice with the close button', async () => {
+      const { user } = await createTaskSuccessfully()
+
+      await user.click(screen.getByRole('button', { name: 'Cerrar aviso' }))
+
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    })
+
+    /**
+     * Case: the task was created and the user presses Escape.
+     * Expected: the notice disappears.
+     * Result: no status is rendered after pressing Escape.
+     */
+    it('closes the notice with Escape', async () => {
+      const { user } = await createTaskSuccessfully()
+
+      await user.keyboard('{Escape}')
+
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    })
+
+    /**
+     * Case: the task was created.
+     * Expected: the form is cleared and the focus goes back to the Título field to create another task.
+     * Result: the Título field is empty and has the focus.
+     */
+    it('returns the focus to the title after creating the task', async () => {
+      await createTaskSuccessfully()
+
+      expect(screen.getByLabelText('Título')).toHaveValue('')
+      expect(screen.getByLabelText('Título')).toHaveFocus()
+    })
+
+    /**
+     * Case: the creation fails.
+     * Expected: the error stays inside the form (role alert), not in a notice.
+     * Result: an alert is shown and no status notice appears.
+     */
+    it('keeps errors inside the form instead of a notice', async () => {
+      mockCreateTask.mockRejectedValueOnce(new Error('boom'))
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await fillRequiredFields(user)
+      await user.click(screen.getByRole('button', { name: /crear tarea/i }))
+
+      expect(await screen.findByRole('alert')).toBeInTheDocument()
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    })
+  })
+
   describe('E2 · create task with responsible', () => {
     /**
-     * Case: besides the basic data, the email of an active collaborator is entered.
+     * Case: besides the basic data, an active collaborator of the team is picked from the list.
      * Expected: the task is created assigned to that responsible.
      * Result: createTask receives responsibleEmail and the success message is shown.
      */
-    it('sends the trimmed responsible email when creating the task', async () => {
+    it('sends the email of the collaborator picked from the list', async () => {
       mockCreateTask.mockResolvedValueOnce({ ...createdTask, responsibleUserId: 'u1' })
       const { user } = renderWithProviders(<CreateTaskPage />)
 
-      await selectTeam(user)
-      await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
-      await user.type(screen.getByLabelText('Responsable (correo)'), 'ana@compira.co')
+      await fillRequiredFields(user)
+      await selectResponsible(user, /Ana García/)
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
       expect(mockCreateTask).toHaveBeenCalledWith(expect.objectContaining({ teamId: 'team-1', responsibleEmail: 'ana@compira.co' }))
@@ -160,7 +281,7 @@ describe('CreateTaskPage', () => {
       const { user } = renderWithProviders(<CreateTaskPage />)
 
       await screen.findByRole('option', { name: 'Operaciones' })
-      await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
 
       expect(screen.getByRole('button', { name: /crear tarea/i })).toBeDisabled()
       expect(mockCreateTask).not.toHaveBeenCalled()
@@ -175,7 +296,7 @@ describe('CreateTaskPage', () => {
       const { user } = renderWithProviders(<CreateTaskPage />)
 
       await selectTeam(user)
-      await user.type(screen.getByLabelText('Titulo'), '   ')
+      await user.type(screen.getByLabelText('Título'), '   ')
 
       expect(screen.getByRole('button', { name: /crear tarea/i })).toBeDisabled()
       expect(mockCreateTask).not.toHaveBeenCalled()
@@ -188,7 +309,7 @@ describe('CreateTaskPage', () => {
      */
     it('limits the title to 150 characters', () => {
       renderWithProviders(<CreateTaskPage />)
-      expect(screen.getByLabelText('Titulo')).toHaveAttribute('maxLength', '150')
+      expect(screen.getByLabelText('Título')).toHaveAttribute('maxLength', '150')
     })
 
     /**
@@ -199,20 +320,20 @@ describe('CreateTaskPage', () => {
     it('truncates a title longer than 150 characters', async () => {
       const { user } = renderWithProviders(<CreateTaskPage />)
 
-      await user.click(screen.getByLabelText('Titulo'))
+      await user.click(screen.getByLabelText('Título'))
       await user.paste('a'.repeat(151))
 
-      expect(screen.getByLabelText('Titulo')).toHaveValue('a'.repeat(150))
+      expect(screen.getByLabelText('Título')).toHaveValue('a'.repeat(150))
     })
 
     /**
-     * Case: the description limit is checked (the component defines 2000; the HU asks for 150).
-     * Expected: the description has a character limit.
-     * Result: the textarea has maxLength = 2000 (current behavior, differs from the HU).
+     * Case: the description limit is checked.
+     * Expected: the description accepts at most 2000 characters.
+     * Result: the textarea has maxLength = 2000.
      */
-    it('limits the description to 2000 characters (current component behavior)', () => {
+    it('limits the description to 2000 characters', () => {
       renderWithProviders(<CreateTaskPage />)
-      expect(screen.getByLabelText('Descripcion')).toHaveAttribute('maxLength', '2000')
+      expect(screen.getByLabelText('Descripción')).toHaveAttribute('maxLength', '2000')
     })
 
     /**
@@ -223,22 +344,345 @@ describe('CreateTaskPage', () => {
     it('truncates a description longer than 2000 characters', async () => {
       const { user } = renderWithProviders(<CreateTaskPage />)
 
-      await user.click(screen.getByLabelText('Descripcion'))
+      await user.click(screen.getByLabelText('Descripción'))
       await user.paste('b'.repeat(2001))
 
-      expect(screen.getByLabelText('Descripcion')).toHaveValue('b'.repeat(2000))
+      expect(screen.getByLabelText('Descripción')).toHaveValue('b'.repeat(2000))
     })
 
-    // Pending in the component: canSubmit currently only requires team and title.
-    it.todo('disables submit when the description is empty')
-    it.todo('disables submit when the due date is empty')
-    // Pending in the component: DESCRIPTION_MAX_LENGTH is 2000 and the HU asks for 150.
-    it.todo('limits the description to 150 characters')
+    /**
+     * Case: team, title and due date are filled in, but the description is empty or only whitespace.
+     * Expected: the "Crear tarea" button stays disabled.
+     * Result: the button is disabled and createTask is not called.
+     */
+    it.each(['', '   '])('disables submit when the description is %j', async (description) => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await selectTeam(user)
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+      if (description) await user.type(screen.getByLabelText('Descripción'), description)
+      fireEvent.change(screen.getByLabelText('Fecha límite'), { target: { value: '2099-12-31T10:00' } })
+
+      expect(screen.getByRole('button', { name: /crear tarea/i })).toBeDisabled()
+      expect(mockCreateTask).not.toHaveBeenCalled()
+    })
+
+    /**
+     * Case: team, title and description are filled in, but the due date is empty.
+     * Expected: the "Crear tarea" button stays disabled.
+     * Result: the button is disabled and createTask is not called.
+     */
+    it('disables submit when the due date is empty', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await selectTeam(user)
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+      await user.type(screen.getByLabelText('Descripción'), 'Informe mensual')
+
+      expect(screen.getByRole('button', { name: /crear tarea/i })).toBeDisabled()
+      expect(mockCreateTask).not.toHaveBeenCalled()
+    })
+
+    /**
+     * Case: the form is rendered.
+     * Expected: the description placeholder is not marked as optional and description and due date are required.
+     * Result: the placeholder has no "opcional" and both fields have the required attribute.
+     */
+    it('marks description and due date as required', () => {
+      renderWithProviders(<CreateTaskPage />)
+
+      expect(screen.getByLabelText('Descripción')).toHaveAttribute('placeholder', 'Describe qué hay que hacer')
+      expect(screen.getByLabelText('Descripción').getAttribute('placeholder')).not.toMatch(/opcional/i)
+      expect(screen.getByLabelText('Descripción')).toBeRequired()
+      expect(screen.getByLabelText('Fecha límite')).toBeRequired()
+    })
+
+    /**
+     * Case: all required fields are filled in and there is no responsible.
+     * Expected: the button is enabled and the payload carries the trimmed description and the ISO date.
+     * Result: createTask receives description, dueDate in ISO and responsibleEmail undefined.
+     */
+    it('enables submit and sends the trimmed description and ISO date when all required fields are filled', async () => {
+      mockCreateTask.mockResolvedValueOnce(createdTask)
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await selectTeam(user)
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+      await user.type(screen.getByLabelText('Descripción'), '  Informe mensual  ')
+      fireEvent.change(screen.getByLabelText('Fecha límite'), { target: { value: '2099-12-31T10:00' } })
+      expect(screen.getByRole('button', { name: /crear tarea/i })).toBeEnabled()
+      await user.click(screen.getByRole('button', { name: /crear tarea/i }))
+
+      expect(mockCreateTask).toHaveBeenCalledWith({
+        teamId: 'team-1',
+        title: 'Preparar informe',
+        description: 'Informe mensual',
+        dueDate: new Date('2099-12-31T10:00').toISOString(),
+        responsibleEmail: undefined,
+      })
+    })
+
+    /**
+     * Case: 10 characters are typed in the title.
+     * Expected: a counter "10/150" is shown under the title and linked to the field.
+     * Result: the counter text is rendered and the title has aria-describedby pointing to it.
+     */
+    it('shows a character counter under the title', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await user.type(screen.getByLabelText('Título'), '0123456789')
+
+      expect(screen.getByText('10/150')).toBeInTheDocument()
+      expect(screen.getByLabelText('Título')).toHaveAttribute('aria-describedby', 'task-title-counter')
+      expect(document.getElementById('task-title-counter')).toContainElement(screen.getByText('10/150'))
+    })
+
+    /**
+     * Case: the title reaches 90 % of its limit (135 characters).
+     * Expected: the counter changes to the warning color.
+     * Result: the counter has the near-limit class.
+     */
+    it('warns when the title reaches 90 % of the limit', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await user.click(screen.getByLabelText('Título'))
+      await user.paste('a'.repeat(135))
+
+      expect(document.getElementById('task-title-counter')).toHaveClass('near-limit')
+    })
+
+    /**
+     * Case: the title reaches its limit (150 characters).
+     * Expected: the notice "Llegaste al máximo de 150 caracteres" is shown.
+     * Result: the notice is rendered.
+     */
+    it('shows the limit notice when the title reaches 150 characters', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await user.click(screen.getByLabelText('Título'))
+      await user.paste('a'.repeat(150))
+
+      expect(screen.getByText('Llegaste al máximo de 150 caracteres')).toBeInTheDocument()
+    })
+
+    /**
+     * Case: the user pastes more than 2000 characters in the description.
+     * Expected: the field keeps the first 2000 characters and shows the limit notice.
+     * Result: the value has 2000 characters, the counter shows 2000/2000 and the notice appears.
+     */
+    it('keeps 2000 characters and shows the notice when the description is over the limit', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await user.click(screen.getByLabelText('Descripción'))
+      await user.paste('b'.repeat(2001))
+
+      expect(screen.getByLabelText('Descripción')).toHaveValue('b'.repeat(2000))
+      expect(screen.getByText('2000/2000')).toBeInTheDocument()
+      expect(screen.getByText('Llegaste al máximo de 2000 caracteres')).toBeInTheDocument()
+      expect(screen.getByLabelText('Descripción')).toHaveAttribute('aria-describedby', 'task-description-counter')
+    })
   })
 
   describe('E4 · due date earlier than now', () => {
-    // Pending in the component: there is no past-date validation.
-    it.todo('shows "La fecha límite no puede ser anterior al momento actual" and does not create the task')
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    function freezeTime() {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date('2026-10-11T10:00:30'))
+    }
+
+    /**
+     * Case: the current time is 10:00:30.
+     * Expected: the due date field does not allow dates before the next minute.
+     * Result: the min attribute is "2026-10-11T10:01".
+     */
+    it('sets the min attribute of the due date to the next minute', () => {
+      freezeTime()
+      renderWithProviders(<CreateTaskPage />)
+
+      expect(screen.getByLabelText('Fecha límite')).toHaveAttribute('min', '2026-10-11T10:01')
+    })
+
+    /**
+     * Case: the page stays open for a while and the user focuses the due date field.
+     * Expected: the minimum is recalculated with the current time.
+     * Result: the min attribute moves to the next minute after focusing.
+     */
+    it('recalculates the min attribute when the due date field is focused', () => {
+      freezeTime()
+      renderWithProviders(<CreateTaskPage />)
+      vi.setSystemTime(new Date('2026-10-11T10:30:10'))
+
+      fireEvent.focus(screen.getByLabelText('Fecha límite'))
+
+      expect(screen.getByLabelText('Fecha límite')).toHaveAttribute('min', '2026-10-11T10:31')
+    })
+
+    /**
+     * Case: a past date is typed by hand (min does not prevent typing) with the rest of the fields filled in.
+     * Expected: the red message "La fecha límite no puede ser anterior al momento actual" appears under the field, the field is invalid and the button is disabled.
+     * Result: the message is rendered, aria-invalid is true, the button is disabled and createTask is not called.
+     */
+    it('shows the red message, marks the field invalid and disables submit for a past date', async () => {
+      freezeTime()
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await fillRequiredFields(user)
+      fireEvent.change(screen.getByLabelText('Fecha límite'), { target: { value: '2026-10-11T09:00' } })
+
+      const message = screen.getByText('La fecha límite no puede ser anterior al momento actual')
+      expect(message).toHaveClass('field-error')
+      expect(screen.getByLabelText('Fecha límite')).toHaveAttribute('aria-invalid', 'true')
+      expect(screen.getByLabelText('Fecha límite')).toHaveAttribute('aria-describedby', message.id)
+      expect(screen.getByRole('button', { name: /crear tarea/i })).toBeDisabled()
+      expect(mockCreateTask).not.toHaveBeenCalled()
+    })
+
+    /**
+     * Case: a future date is selected with the rest of the fields filled in.
+     * Expected: no message and the button is enabled.
+     * Result: no past-date message, aria-invalid false and the button enabled.
+     */
+    it('shows no message and enables submit for a future date', async () => {
+      freezeTime()
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await fillRequiredFields(user)
+
+      expect(screen.queryByText('La fecha límite no puede ser anterior al momento actual')).not.toBeInTheDocument()
+      expect(screen.getByLabelText('Fecha límite')).toHaveAttribute('aria-invalid', 'false')
+      expect(screen.getByRole('button', { name: /crear tarea/i })).toBeEnabled()
+    })
+
+    /**
+     * Case: the backend rejects the date (TASK_011) although the form allowed it.
+     * Expected: the backend message is shown in a red alert and the task is not created.
+     * Result: the alert contains "La fecha límite no puede ser anterior al momento actual" and no success status appears.
+     */
+    it('shows the backend message when the date is rejected by the server', async () => {
+      const { TaskRequestError } = await import('../tasksApi')
+      mockCreateTask.mockRejectedValueOnce(new TaskRequestError({ code: 'TASK_011', message: 'La fecha límite no puede ser anterior al momento actual' }))
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await fillRequiredFields(user)
+      await user.click(screen.getByRole('button', { name: /crear tarea/i }))
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('La fecha límite no puede ser anterior al momento actual')
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('submit button hint', () => {
+    function submitWrapper() {
+      return screen.getByRole('button', { name: /crear tarea|creando tarea/i }).parentElement as HTMLElement
+    }
+
+    /**
+     * Case: the form is empty and the user hovers the disabled button.
+     * Expected: a tooltip lists only the pending fields: "Para crear la tarea falta: equipo, título, descripción, fecha límite".
+     * Result: an element with role tooltip shows that text.
+     */
+    it('shows a tooltip with the pending fields when hovering the disabled button', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await user.hover(submitWrapper())
+
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Para crear la tarea falta: equipo, título, descripción, fecha límite')
+    })
+
+    /**
+     * Case: some fields are filled in and the keyboard user focuses the disabled button wrapper.
+     * Expected: the tooltip lists only the fields that are still pending.
+     * Result: the tooltip says "Para crear la tarea falta: descripción, fecha límite".
+     */
+    it('shows only the pending fields on keyboard focus', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+      await selectTeam(user)
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
+
+      fireEvent.focus(submitWrapper())
+
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Para crear la tarea falta: descripción, fecha límite')
+      expect(submitWrapper()).toHaveAttribute('tabindex', '0')
+    })
+
+    /**
+     * Case: the due date is before the current moment.
+     * Expected: the hint says the date must be later than the current moment.
+     * Result: the tooltip includes "la fecha límite debe ser posterior al momento actual".
+     */
+    it('mentions the past due date in the hint', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await fillRequiredFields(user)
+      fireEvent.change(screen.getByLabelText('Fecha límite'), { target: { value: '2000-01-01T10:00' } })
+      await user.hover(submitWrapper())
+
+      expect(screen.getByRole('tooltip')).toHaveTextContent('la fecha límite debe ser posterior al momento actual')
+    })
+
+    /**
+     * Case: the coordinator has no teams.
+     * Expected: the hint explains that an administrator must assign a team.
+     * Result: the tooltip shows "Necesitas un equipo asignado por el Administrador para crear tareas.".
+     */
+    it('explains the lack of teams in the hint', async () => {
+      vi.mocked(getTeams).mockResolvedValue([])
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await user.hover(submitWrapper())
+
+      await waitFor(() => expect(screen.getByRole('tooltip')).toHaveTextContent('Necesitas un equipo asignado por el Administrador para crear tareas.'))
+    })
+
+    /**
+     * Case: all required fields are filled in (enabled button).
+     * Expected: no tooltip and no hint text.
+     * Result: hovering shows no tooltip and the button has no aria-describedby.
+     */
+    it('shows no hint when the button is enabled', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await fillRequiredFields(user)
+      await user.hover(submitWrapper())
+
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /crear tarea/i })).not.toHaveAttribute('aria-describedby')
+    })
+
+    /**
+     * Case: the task is being sent.
+     * Expected: no tooltip while submitting.
+     * Result: after clicking create, hovering shows no tooltip.
+     */
+    it('shows no hint while the task is being sent', async () => {
+      mockCreateTask.mockReturnValueOnce(new Promise(() => {}))
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await fillRequiredFields(user)
+      await user.click(screen.getByRole('button', { name: /crear tarea/i }))
+      await user.hover(submitWrapper())
+
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    })
+
+    /**
+     * Case: the button is disabled and the device has no hover (touch).
+     * Expected: the same text exists as visible text under the button, linked with aria-describedby (the stylesheet shows it on touch and narrow screens).
+     * Result: the button points with aria-describedby to a paragraph with the hint text and keeps the disabled attribute.
+     */
+    it('links the hint text to the disabled button with aria-describedby', async () => {
+      renderWithProviders(<CreateTaskPage />)
+      await screen.findByRole('option', { name: 'Operaciones' })
+
+      const button = screen.getByRole('button', { name: /crear tarea/i })
+      const hintId = button.getAttribute('aria-describedby')
+      expect(button).toBeDisabled()
+      expect(hintId).toBeTruthy()
+      expect(document.getElementById(hintId as string)).toHaveTextContent('Para crear la tarea falta: equipo, título, descripción, fecha límite')
+    })
   })
 
   describe('E5 · invalid responsible', () => {
@@ -256,9 +700,8 @@ describe('CreateTaskPage', () => {
       mockCreateTask.mockRejectedValueOnce(new TaskRequestError({ code, message }))
       const { user } = renderWithProviders(<CreateTaskPage />)
 
-      await selectTeam(user)
-      await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
-      await user.type(screen.getByLabelText('Responsable (correo)'), 'otro@compira.co')
+      await fillRequiredFields(user)
+      await selectResponsible(user, /Luis Pérez/)
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
       expect(await screen.findByRole('alert')).toHaveTextContent(message)
@@ -276,8 +719,7 @@ describe('CreateTaskPage', () => {
 
       const { user } = renderWithProviders(<CreateTaskPage />)
 
-      await selectTeam(user)
-      await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
+      await fillRequiredFields(user)
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
       expect(await screen.findByRole('alert')).toHaveTextContent('Solo un coordinador')
@@ -286,17 +728,241 @@ describe('CreateTaskPage', () => {
     /**
      * Case: unhandled error (not a TaskRequestError).
      * Expected: generic message to retry.
-     * Result: the alert shows "Ocurrio un error inesperado. Intenta nuevamente."
+     * Result: the alert shows "Ocurrió un error inesperado. Intenta nuevamente."
      */
     it('shows a generic message for unexpected errors', async () => {
       mockCreateTask.mockRejectedValueOnce(new Error('boom'))
       const { user } = renderWithProviders(<CreateTaskPage />)
 
-      await selectTeam(user)
-      await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
+      await fillRequiredFields(user)
       await user.click(screen.getByRole('button', { name: /crear tarea/i }))
 
-      expect(await screen.findByRole('alert')).toHaveTextContent('Ocurrio un error inesperado. Intenta nuevamente.')
+      expect(await screen.findByRole('alert')).toHaveTextContent('Ocurrió un error inesperado. Intenta nuevamente.')
+    })
+  })
+
+  /**
+   * HU-12 · selector filtrable de responsable.
+   */
+  describe('responsible selector', () => {
+    /**
+     * Case: no team is selected yet.
+     * Expected: the field is disabled with "Selecciona primero un equipo" and members are not requested.
+     * Result: the input is disabled with that placeholder and getTeamMembers is not called.
+     */
+    it('is disabled until a team is selected', () => {
+      renderWithProviders(<CreateTaskPage />)
+
+      const field = screen.getByLabelText('Responsable (opcional)')
+      expect(field).toBeDisabled()
+      expect(field).toHaveAttribute('placeholder', 'Selecciona primero un equipo')
+      expect(getTeamMembers).not.toHaveBeenCalled()
+    })
+
+    /**
+     * Case: the user selects a team.
+     * Expected: the members of that team are loaded and the field is enabled.
+     * Result: getTeamMembers is called with the team id and the field becomes enabled.
+     */
+    it('loads the team members and enables the field when a team is selected', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await selectTeam(user)
+
+      expect(getTeamMembers).toHaveBeenCalledWith('team-1', expect.any(AbortSignal))
+      await vi.waitFor(() => expect(screen.getByLabelText('Responsable (opcional)')).toBeEnabled())
+    })
+
+    /**
+     * Case: a responsible is chosen and then the team changes.
+     * Expected: the chosen responsible is cleared.
+     * Result: the field is empty after changing the team.
+     */
+    it('clears the responsible when the team changes', async () => {
+      vi.mocked(getTeams).mockResolvedValue([
+        { id: 'team-1', name: 'Operaciones', coordinatorUserId: 'c1', coordinatorEmail: 'coordinator@compira.co' },
+        { id: 'team-2', name: 'Soporte', coordinatorUserId: 'c1', coordinatorEmail: 'coordinator@compira.co' },
+      ])
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await selectTeam(user)
+      await selectResponsible(user, /Ana García/)
+      expect(screen.getByLabelText('Responsable (opcional)')).toHaveValue('Ana García')
+      await user.selectOptions(screen.getByLabelText('Equipo'), 'team-2')
+
+      expect(screen.getByLabelText('Responsable (opcional)')).toHaveValue('')
+    })
+
+    /**
+     * Case: a responsible is chosen and the task is created.
+     * Expected: the responsible is cleared with the rest of the form.
+     * Result: the field is empty after the success message.
+     */
+    it('clears the responsible after creating the task', async () => {
+      mockCreateTask.mockResolvedValueOnce({ ...createdTask, responsibleUserId: 'm1' })
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await fillRequiredFields(user)
+      await selectResponsible(user, /Ana García/)
+      await user.click(screen.getByRole('button', { name: /crear tarea/i }))
+
+      await screen.findByRole('status')
+      expect(screen.getByLabelText('Responsable (opcional)')).toHaveValue('')
+    })
+
+    /**
+     * Case: loading the members fails.
+     * Expected: an alert with the error is shown, the field stays disabled and the task can still be created without responsible.
+     * Result: the alert shows the message, the field is disabled and createTask is called without responsibleEmail.
+     */
+    it('shows an error and still allows creating the task without responsible when members fail to load', async () => {
+      vi.mocked(getTeamMembers).mockRejectedValue(new Error('No se pudieron cargar los colaboradores.'))
+      mockCreateTask.mockResolvedValueOnce(createdTask)
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await selectTeam(user)
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('No se pudieron cargar los colaboradores.')
+      expect(screen.getByLabelText('Responsable (opcional)')).toBeDisabled()
+
+      await fillTaskFields(user)
+      await user.click(screen.getByRole('button', { name: /crear tarea/i }))
+
+      expect(mockCreateTask).toHaveBeenCalledWith(expect.objectContaining({ responsibleEmail: undefined }))
+    })
+
+    /**
+     * Case: loading the members of a team fails and the user then picks another team that loads fine.
+     * Expected: the stale error is removed and the field is enabled again.
+     * Result: no alert is shown and the field is enabled after changing the team.
+     */
+    it('removes the members error and re-enables the field when another team loads fine', async () => {
+      vi.mocked(getTeams).mockResolvedValue([
+        { id: 'team-1', name: 'Operaciones', coordinatorUserId: 'c1', coordinatorEmail: 'coordinator@compira.co' },
+        { id: 'team-2', name: 'Soporte', coordinatorUserId: 'c1', coordinatorEmail: 'coordinator@compira.co' },
+      ])
+      vi.mocked(getTeamMembers).mockRejectedValueOnce(new Error('No se pudieron cargar los colaboradores.'))
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await selectTeam(user)
+      expect(await screen.findByRole('alert')).toHaveTextContent('No se pudieron cargar los colaboradores.')
+      await user.selectOptions(screen.getByLabelText('Equipo'), 'team-2')
+
+      await vi.waitFor(() => expect(screen.getByLabelText('Responsable (opcional)')).toBeEnabled())
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    })
+
+    /**
+     * Case: the selected team has no collaborators.
+     * Expected: "Este equipo aún no tiene colaboradores. Puedes crear la tarea sin responsable." is shown.
+     * Result: the message appears when opening the field.
+     */
+    it('shows a message when the team has no collaborators', async () => {
+      vi.mocked(getTeamMembers).mockResolvedValue([])
+      const { user } = renderWithProviders(<CreateTaskPage />)
+
+      await selectTeam(user)
+      await vi.waitFor(() => expect(screen.getByLabelText('Responsable (opcional)')).toBeEnabled())
+      await user.click(screen.getByLabelText('Responsable (opcional)'))
+
+      expect(screen.getByText('Este equipo aún no tiene colaboradores. Puedes crear la tarea sin responsable.')).toBeInTheDocument()
+    })
+  })
+
+  describe('layout and visual states', () => {
+    /**
+     * Case: the form is rendered.
+     * Expected: the form uses a single column and a narrow panel, and the page does not repeat the section name as eyebrow.
+     * Result: both field groups have the single-column class, the panel is narrow and "Gestion de tareas" is absent.
+     */
+    it('uses a single column, a narrow panel and no repeated eyebrow', () => {
+      const { container } = renderWithProviders(<CreateTaskPage />)
+
+      expect(container.querySelectorAll('.task-form-grid.single')).toHaveLength(2)
+      expect(container.querySelector('.form-panel')).toHaveClass('narrow')
+      expect(container.querySelector('.eyebrow')).not.toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Crear tarea' })).toBeInTheDocument()
+    })
+
+    /**
+     * Case: no team is selected, then a team is selected.
+     * Expected: the team select looks like a placeholder only while it has no value.
+     * Result: the select has the is-placeholder class without a team and loses it with a team.
+     */
+    it('marks the team select as placeholder only while it has no value', async () => {
+      const { user } = renderWithProviders(<CreateTaskPage />)
+      expect(screen.getByLabelText('Equipo')).toHaveClass('is-placeholder')
+
+      await selectTeam(user)
+
+      expect(screen.getByLabelText('Equipo')).not.toHaveClass('is-placeholder')
+    })
+  })
+
+  describe('due date time zone', () => {
+    /**
+     * Case: the form is rendered on a device in America/Bogota.
+     * Expected: under the due date, "Hora de tu dispositivo: America/Bogota (UTC−05:00)" is shown.
+     * Result: the hint with the device zone and offset is rendered.
+     */
+    it('shows the device time zone under the due date', () => {
+      renderWithProviders(<CreateTaskPage />)
+
+      expect(screen.getByText('Hora de tu dispositivo: America/Bogota (UTC−05:00)')).toBeInTheDocument()
+    })
+
+    /**
+     * Case: the organization uses a different time zone than the device.
+     * Expected: a warning says that the date is saved with the device time.
+     * Result: the warning names the organization zone and the device-time note.
+     */
+    it('warns when the organization zone differs from the device zone', async () => {
+      vi.mocked(getOrganizationSettings).mockResolvedValue({ timeZone: 'Europe/Madrid', notificationsEnabled: true })
+      renderWithProviders(<CreateTaskPage />)
+
+      const warning = await screen.findByText(/Tu organización usa Europe\/Madrid \(UTC\+0[12]:00\)/)
+      expect(warning).toHaveTextContent('La fecha se guardará con la hora de tu dispositivo.')
+    })
+
+    /**
+     * Case: the organization uses the same time zone as the device.
+     * Expected: no warning.
+     * Result: no "Tu organización usa" text is shown.
+     */
+    it('shows no warning when the organization zone equals the device zone', async () => {
+      vi.mocked(getOrganizationSettings).mockResolvedValue({ timeZone: 'America/Bogota', notificationsEnabled: true })
+      renderWithProviders(<CreateTaskPage />)
+
+      await waitFor(() => expect(getOrganizationSettings).toHaveBeenCalled())
+      expect(screen.queryByText(/Tu organización usa/)).not.toBeInTheDocument()
+    })
+
+    /**
+     * Case: the organization has no time zone configured.
+     * Expected: no warning.
+     * Result: no "Tu organización usa" text is shown.
+     */
+    it('shows no warning when the organization has no zone', async () => {
+      renderWithProviders(<CreateTaskPage />)
+
+      await waitFor(() => expect(getOrganizationSettings).toHaveBeenCalled())
+      expect(screen.queryByText(/Tu organización usa/)).not.toBeInTheDocument()
+    })
+
+    /**
+     * Case: reading the organization settings fails (for example, no permission).
+     * Expected: only the device zone is shown and the form is not blocked or flagged with an error.
+     * Result: the device hint is present, there is no alert and the fields stay enabled.
+     */
+    it('shows only the device zone and no error when the settings cannot be read', async () => {
+      vi.mocked(getOrganizationSettings).mockRejectedValue(new Error('forbidden'))
+      renderWithProviders(<CreateTaskPage />)
+
+      await waitFor(() => expect(getOrganizationSettings).toHaveBeenCalled())
+      expect(screen.getByText('Hora de tu dispositivo: America/Bogota (UTC−05:00)')).toBeInTheDocument()
+      expect(screen.queryByText(/Tu organización usa/)).not.toBeInTheDocument()
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      expect(screen.getByLabelText('Fecha límite')).toBeEnabled()
     })
   })
 
@@ -310,9 +976,9 @@ describe('CreateTaskPage', () => {
       vi.mocked(getTeams).mockResolvedValue([])
       const { user } = renderWithProviders(<CreateTaskPage />)
 
-      await user.type(screen.getByLabelText('Titulo'), 'Preparar informe')
+      await user.type(screen.getByLabelText('Título'), 'Preparar informe')
 
-      expect(screen.getByText('Necesitas un equipo asignado por el Administrador para crear tareas.')).toBeInTheDocument()
+      expect(document.querySelector('.field-hint')).toHaveTextContent('Necesitas un equipo asignado por el Administrador para crear tareas.')
       expect(screen.getAllByRole('option')).toHaveLength(1)
       expect(screen.getByRole('button', { name: /crear tarea/i })).toBeDisabled()
     })

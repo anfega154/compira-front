@@ -129,11 +129,11 @@ export function NotificationCenter() {
 
   return (
     <details className="notification-center">
-      <summary>
+      <summary aria-label={unreadCount > 0 ? `Notificaciones, ${unreadCount} sin leer` : 'Notificaciones'}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
           <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
         </svg>
-        Notificaciones
+        <span className="notification-label">Notificaciones</span>
         {unreadCount > 0 && (
           <span className="notification-count" aria-live="polite" aria-label={`${unreadCount} avisos sin leer`}>{unreadCount}</span>
         )}

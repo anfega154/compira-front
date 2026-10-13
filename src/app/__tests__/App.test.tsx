@@ -132,3 +132,38 @@ describe('First login', () => {
     expect(screen.queryByRole('heading', { name: 'Iniciar sesion' })).not.toBeInTheDocument()
   })
 })
+
+describe('HU-12 · Create task: access permissions (E8)', () => {
+  /**
+   * Case: a user without the coordinator role types the /tasks/create address.
+   * Expected: "No tienes permisos para acceder a esta página." appears and the user cannot create.
+   * Result: the permission alert is shown, there is no "Crear tarea" form and teams are not requested.
+   */
+  it.each<UserRole>(['ADMINISTRATOR', 'COLLABORATOR'])('blocks %s opening /tasks/create directly', async (role) => {
+    persistSession({ ...module3User(), roles: [role] }, module3Tokens)
+    renderWithProviders(<App />, { initialEntries: ['/tasks/create'] })
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('No tienes permisos para acceder a esta página.')
+    expect(screen.queryByLabelText('Titulo')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Crear tarea' })).not.toBeInTheDocument()
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/teams'))).toBe(false)
+  })
+
+  /**
+   * Case: a coordinator opens /tasks/create.
+   * Expected: the creation form is available.
+   * Result: the Titulo field and the "Crear tarea" button are shown.
+   */
+  it('allows a coordinator to open /tasks/create', async () => {
+    fetchMock.mockImplementation((url: string, options?: RequestInit) => {
+      if (url.endsWith('/notifications/stream')) return Promise.resolve(module3Stream(options?.signal).response)
+      if (url.includes('/teams')) return Promise.resolve(new Response('[]'))
+      throw new Error(`Unexpected request: ${url}`)
+    })
+    persistSession({ ...module3User(), roles: ['COORDINATOR'] }, module3Tokens)
+    renderWithProviders(<App />, { initialEntries: ['/tasks/create'] })
+
+    expect(await screen.findByLabelText('Titulo')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Crear tarea' })).toBeVisible()
+  })
+})

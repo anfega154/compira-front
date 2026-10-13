@@ -1,5 +1,6 @@
 import { INVALID_EMAIL_MESSAGE, isValidEmail } from '../auth/emailValidation'
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { PasswordVisibilityButton } from '../auth/PasswordVisibilityButton'
 import type { FormEvent } from 'react'
 import { AuthRequestError, registerUser } from '../auth/authApi'
@@ -30,6 +31,7 @@ const initialForm: FormState = {
 const PASSWORD_MIN_LENGTH = 10
 
 export function RegisterUserPage() {
+  const navigate = useNavigate()
   const [form, setForm] = useState<FormState>(initialForm)
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -99,6 +101,11 @@ export function RegisterUserPage() {
             Crea un nuevo usuario en el sistema. El usuario debera cambiar su contrasena temporal en
             el primer inicio de sesion.
           </p>
+        </div>
+        <div className="page-header-actions">
+          <button type="button" className="secondary-button" onClick={() => navigate('/users')}>
+            Volver a Usuarios
+          </button>
         </div>
       </header>
 

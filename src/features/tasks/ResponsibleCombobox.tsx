@@ -1,5 +1,5 @@
 import { useId, useMemo, useRef, useState } from 'react'
-import type { KeyboardEvent } from 'react'
+import type { KeyboardEvent, RefObject } from 'react'
 import type { TeamMember } from '../teams/teamsApi'
 
 type ResponsibleComboboxProps = {
@@ -10,6 +10,7 @@ type ResponsibleComboboxProps = {
   disabled?: boolean
   placeholder?: string
   isLoading?: boolean
+  inputRef?: RefObject<HTMLInputElement | null>
 }
 
 function normalize(text: string): string {
@@ -36,10 +37,12 @@ export function ResponsibleCombobox({
   disabled = false,
   placeholder = 'Buscar colaborador…',
   isLoading = false,
+  inputRef: externalInputRef,
 }: ResponsibleComboboxProps) {
   const listId = useId()
   const containerRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const internalInputRef = useRef<HTMLInputElement>(null)
+    const inputRef = externalInputRef ?? internalInputRef
   const [query, setQuery] = useState('')
   const [isOpen, setIsOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)

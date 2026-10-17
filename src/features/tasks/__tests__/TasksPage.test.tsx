@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderWithProviders } from '../../../test/render'
 import { module3Tokens, module3User } from '../../../test/module3TestData'
@@ -15,6 +15,7 @@ vi.mock('../tasksApi', () => ({
   getManagedTasks: vi.fn(),
   getTaskIndicators: vi.fn(),
   approveTask: vi.fn(),
+  addObservation: vi.fn(),
   cancelTask: vi.fn(),
   reassignTask: vi.fn(),
   assignTask: vi.fn(),
@@ -31,7 +32,7 @@ vi.mock('../../teams/teamsApi', () => ({
   getTeamMembers: vi.fn(),
 }))
 
-import { approveTask, getManagedTasks, getTaskIndicators, reassignTask, assignTask, cancelTask, TaskRequestError } from '../tasksApi'
+import { addObservation, approveTask, getManagedTasks, getTaskIndicators, reassignTask, assignTask, cancelTask, TaskRequestError } from '../tasksApi'
 import { getTeamMembers } from '../../teams/teamsApi'
 import type { TeamMember } from '../../teams/teamsApi'
 
@@ -288,4 +289,39 @@ describe('Task action modals', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Tarea cancelada.')
     expect(screen.getByRole('heading', { name: 'Tareas del equipo' })).toHaveFocus()
   })
+})
+
+it('allows a coordinator to add an observation without loading assignees', async () => {
+  mockGetManaged.mockResolvedValue([buildTask()])
+  const { user } = renderWithProviders(<TasksPage />)
+  await user.click(await screen.findByRole('button', { name: 'Observación' }))
+  await user.type(screen.getByLabelText('Observación'), 'Revisión del coordinador')
+  await user.click(screen.getByRole('button', { name: 'Guardar observación' }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  expect(addObservation).toHaveBeenCalledWith('t1', { content: 'Revisión del coordinador' })
+  expect(getTeamMembers).not.toHaveBeenCalled()
+})
+
+it('reports failed collaborator loading and prevents assignment', async () => {
+  mockGetManaged.mockResolvedValue([buildTask({ responsibleUserId: null, teamId: 'team-1' })])
+  mockGetTeamMembers.mockRejectedValueOnce(new Error('network'))
+  const { user } = renderWithProviders(<TasksPage />)
+  await user.click(await screen.findByRole('button', { name: 'Asignar', exact: true }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('No se pudieron cargar los colaboradores')
+  expect(screen.getByRole('button', { name: 'Asignar tarea', exact: true })).toBeDisabled()
+  expect(assignTask).not.toHaveBeenCalled()
+})
+
+it.each(['assign', 'reassign'] as const)('automatically presents team collaborators after loading for %s', async action => {
+  mockGetManaged.mockResolvedValue([buildTask({ teamId: 'team-1', responsibleUserId: action === 'assign' ? null : 'r1' })])
+  let resolveMembers!: (members: TeamMember[]) => void
+  mockGetTeamMembers.mockReturnValueOnce(new Promise(resolve => { resolveMembers = resolve }))
+  const { user } = renderWithProviders(<TasksPage />)
+  await user.click(await screen.findByRole('button', { name: action === 'assign' ? 'Asignar' : 'Reasignar', exact: true }))
+  const dialog = screen.getByRole('dialog')
+  expect(within(dialog).getByRole('combobox')).toBeDisabled()
+  await act(async () => resolveMembers(teamMembers))
+  expect(within(dialog).getByRole('combobox')).toHaveFocus()
+  expect(await within(dialog).findByRole('option', { name: /Nuevo Responsable/ })).toBeVisible()
+  expect(getTeamMembers).toHaveBeenCalledWith('team-1', expect.any(AbortSignal))
 })

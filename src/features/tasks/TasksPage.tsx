@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import {
   TaskRequestError,
   approveTask,
+  addObservation,
   assignTask,
   cancelTask,
   getManagedTasks,
@@ -32,7 +33,7 @@ export function TasksPage() {
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [busyTaskId, setBusyTaskId] = useState<string | null>(null)
 
-  const [taskAction, setTaskAction] = useState<{ task: Task; action: 'reassign' | 'assign' | 'cancel' } | null>(null)
+  const [taskAction, setTaskAction] = useState<{ task: Task; action: 'reassign' | 'assign' | 'cancel' | 'observation' } | null>(null)
   const [actionMembers, setActionMembers] = useState<TeamMember[]>([])
   const [isLoadingMembers, setIsLoadingMembers] = useState(false)
   const [membersFailed, setMembersFailed] = useState(false)
@@ -50,7 +51,7 @@ export function TasksPage() {
   useEffect(() => {
     setActionMembers([])
     setMembersFailed(false)
-    if (!taskAction || taskAction.action === 'cancel') {
+    if (!taskAction || (taskAction.action === 'cancel' || taskAction.action === 'observation')) {
       setIsLoadingMembers(false)
       return
     }
@@ -103,10 +104,13 @@ export function TasksPage() {
     }
   }
 
-  async function handleTaskAction(taskId: string, action: 'reassign' | 'assign' | 'cancel', value: string) {
+  async function handleTaskAction(taskId: string, action: 'reassign' | 'assign' | 'cancel' | 'observation', value: string) {
     setActionMessage(null)
     setError(null)
-    if (action === 'assign') {
+    if (action === 'observation') {
+      await addObservation(taskId, { content: value })
+      setActionMessage('Observación registrada.')
+    } else if (action === 'assign') {
       await assignTask(taskId, { responsibleEmail: value })
       setActionMessage('Tarea asignada.')
     } else if (action === 'reassign') {
@@ -235,8 +239,8 @@ export function TasksPage() {
           </button>
         </div>
 
-        <div className="table-wrapper">
-          <table>
+        <div className="table-wrapper" tabIndex={0} role="region" aria-label="Listado de tareas">
+          <table className="responsive-card-table">
             <thead>
               <tr>
                 <th>Titulo</th>
@@ -261,15 +265,16 @@ export function TasksPage() {
 
               {filteredTasks.map((task) => (
                 <tr key={task.id}>
-                  <td>
+                  <td data-label="Título">
                     <Link to={`/tasks/${task.id}`}>{task.title}</Link>
                   </td>
-                  <td>{task.teamName ?? <span className="metric-foot">Sin equipo</span>}</td>
-                  <td><TaskStatusBadge status={task.status} overdue={task.overdue} /></td>
-                  <td>{formatDateTime(task.dueDate)}</td>
+                  <td data-label="Equipo">{task.teamName ?? <span className="metric-foot">Sin equipo</span>}</td>
+                  <td data-label="Estado"><TaskStatusBadge status={task.status} overdue={task.overdue} /></td>
+                  <td data-label="Fecha límite">{formatDateTime(task.dueDate)}</td>
                   {canManageTasks ? (
-                  <td>
+                  <td data-label="Acciones">
                     <div className="task-actions">
+                      <button type="button" className="task-action-button" onClick={() => setTaskAction({ task, action: 'observation' })} disabled={busyTaskId === task.id}>Observación</button>
                       <button
                         type="button"
                         className="task-action-button"
@@ -352,7 +357,7 @@ function TaskIndicatorsPanel({ indicators }: { indicators: TaskIndicators }) {
           <dd>{indicators.closedOnTimeCount}/{indicators.closedCount}</dd>
         </div>
       </dl>
-      <div className="table-wrapper">
+      <div className="table-wrapper" tabIndex={0} role="region" aria-label="Carga de trabajo por responsable">
         <table>
           <caption>Carga de trabajo por responsable</caption>
           <thead>

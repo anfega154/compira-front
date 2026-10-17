@@ -130,8 +130,9 @@ describe('tasksApi', () => {
   })
 
   it('adds and lists observations and history', async () => {
-    mockFetch.mockReturnValue(jsonResponse([]))
-    await addObservation('t1', { content: 'nota' })
+    const saved = { id: 'o1', taskId: 't1', authorUserId: 'u1', content: 'nota', createdAt: '2026-10-16T12:00:00Z' }
+    mockFetch.mockReturnValueOnce(jsonResponse(saved, 201)).mockReturnValue(jsonResponse([]))
+    expect(await addObservation('t1', { content: 'nota' })).toEqual(saved)
     await getObservations('t1')
     await getTaskHistory('t1')
     expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/tasks/t1/observations'), expect.any(Object))

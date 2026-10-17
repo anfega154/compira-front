@@ -141,7 +141,7 @@ function UsersDirectory() {
         </div>
 
         <div className="table-wrapper">
-          <table>
+          <table className="responsive-card-table">
             <thead>
               <tr>
                 <th>Nombre</th>
@@ -174,14 +174,14 @@ function UsersDirectory() {
 
               {!isLoading && filteredUsers.map(user => (
                 <tr key={user.id}>
-                  <td>
+                  <td data-label="Nombre">
                     <span className="cell-user">
                       <span className="cell-avatar" aria-hidden="true">{initials(user.firstName, user.lastName)}</span>
                       {`${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || '—'}
                     </span>
                   </td>
-                  <td>{user.email}</td>
-                  <td>
+                  <td data-label="Correo">{user.email}</td>
+                  <td data-label="Roles">
                     <div className="task-actions">
                       {user.roles.length === 0 ? '—' : user.roles.map(role => (
                         <span key={role} className={`task-status-badge ${ROLE_TONE[role] ?? 'status-pending'}`}>
@@ -190,14 +190,14 @@ function UsersDirectory() {
                       ))}
                     </div>
                   </td>
-                  <td>{user.teamName ?? <span className="metric-foot">Sin equipo</span>}</td>
-                  <td>
+                  <td data-label="Equipo">{user.teamName ?? <span className="metric-foot">Sin equipo</span>}</td>
+                  <td data-label="Estado">
                     <span className={`task-status-badge ${user.status === 'ACTIVE' ? 'status-completed' : 'status-cancelled'}`}>
                       {user.status === 'ACTIVE' ? 'Activo' : user.status === 'INACTIVE' ? 'Inactivo' : user.status}
                     </span>
                   </td>
-                  <td>{formatDateTime(user.lastLoginAt)}</td>
-                  <td>
+                  <td data-label="Último ingreso">{formatDateTime(user.lastLoginAt)}</td>
+                  <td data-label="Acciones">
                     <button
                       type="button"
                       className="task-action-button"

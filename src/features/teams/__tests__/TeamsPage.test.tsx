@@ -23,9 +23,9 @@ it('creates a team and changes its current coordinator', async () => {
   expect(await screen.findByText('next@compira.co')).toBeInTheDocument()
 })
 
-it.each(['ADMINISTRATOR', 'COORDINATOR'] as const)('allows %s to link collaborators and tasks to a selected team', async (role) => {
+it.each(['ADMINISTRATOR', 'COORDINATOR'] as const)('allows %s to link collaborators to a selected team', async (role) => {
   persistSession(module3User(role), module3Tokens)
-  fetchMock.mockResolvedValueOnce(Response.json([module3Team])).mockResolvedValueOnce(new Response(null, { status: 204 })).mockResolvedValueOnce(new Response(null, { status: 204 }))
+  fetchMock.mockResolvedValueOnce(Response.json([module3Team])).mockResolvedValueOnce(new Response(null, { status: 204 }))
   const { user } = renderWithProviders(<TeamsPage />)
   await user.selectOptions(await screen.findByLabelText('Equipo'), module3Team.id)
   await user.selectOptions(screen.getByLabelText('Acción'), 'member')
@@ -33,11 +33,7 @@ it.each(['ADMINISTRATOR', 'COORDINATOR'] as const)('allows %s to link collaborat
   await user.click(screen.getByRole('button', { name: 'Guardar cambio' }))
   await screen.findByText('Cambio guardado.')
   expect(fetchMock).toHaveBeenLastCalledWith(expect.stringContaining('/teams/team-1/members'), expect.objectContaining({ method: 'POST' }))
-  await user.selectOptions(screen.getByLabelText('Acción'), 'task')
-  await user.type(screen.getByLabelText('Identificador de la tarea'), '11111111-1111-1111-1111-111111111111')
-  await user.click(screen.getByRole('button', { name: 'Guardar cambio' }))
-  await screen.findByText('Cambio guardado.')
-  expect(fetchMock).toHaveBeenLastCalledWith(expect.stringContaining('/teams/team-1/tasks'), expect.objectContaining({ method: 'POST' }))
+
 })
 
 
@@ -109,4 +105,14 @@ it('shows a clear message when the collaborator already belongs to the target te
   await user.click(screen.getByRole('button', { name: 'Guardar cambio' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('El colaborador ya pertenece al equipo destino')
   expect(screen.queryByText('Cambio guardado.')).not.toBeInTheDocument()
+})
+
+it.each(['ADMINISTRATOR', 'COORDINATOR'] as const)('does not offer teamless task linking to %s', async role => {
+  persistSession(module3User(role), module3Tokens)
+  fetchMock.mockResolvedValueOnce(Response.json([module3Team]))
+  const { user } = renderWithProviders(<TeamsPage />)
+  await user.selectOptions(await screen.findByLabelText('Equipo'), module3Team.id)
+  expect(screen.queryByRole('option', { name: /tarea.*sin equipo/i })).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('Tarea existente')).not.toBeInTheDocument()
+  expect(fetchMock).toHaveBeenCalledTimes(1)
 })

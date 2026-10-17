@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   TaskRequestError,
+  addObservation,
   getObservations,
   getTask,
   getTaskHistory,
 } from './tasksApi'
+import { TaskActionModal } from './TaskActionModal'
 import { TaskStatusBadge } from './TaskStatusBadge'
 import { TASK_EVENT_LABELS, formatDateTime } from './taskLabels'
 import type { Task, TaskHistoryEntry, TaskObservation } from './types'
@@ -16,6 +18,8 @@ export function TaskDetailPage() {
   const { user } = useAuth()
   const isManager = user?.roles.some((role) => role === 'ADMINISTRATOR' || role === 'COORDINATOR') ?? false
   const backPath = isManager ? '/tasks' : '/tasks/assigned'
+  const [observationOpen, setObservationOpen] = useState(false)
+  const [activityError, setActivityError] = useState<string | null>(null)
   const [task, setTask] = useState<Task | null>(null)
   const [observations, setObservations] = useState<TaskObservation[]>([])
   const [history, setHistory] = useState<TaskHistoryEntry[]>([])
@@ -30,12 +34,19 @@ export function TaskDetailPage() {
   async function loadDetail(id: string) {
     setLoading(true)
     setError(null)
+    setActivityError(null)
     try {
       const taskData = await getTask(id)
       setTask(taskData)
       const [observationsData, historyData] = await Promise.all([
-        getObservations(id).catch(() => []),
-        getTaskHistory(id).catch(() => []),
+        getObservations(id).catch(() => {
+          setActivityError('No se pudieron cargar las observaciones. Recarga el detalle para reintentar.')
+          return []
+        }),
+        isManager ? getTaskHistory(id).catch(() => {
+          setActivityError('No se pudo cargar el historial. Recarga el detalle para reintentar.')
+          return []
+        }) : Promise.resolve([]),
       ])
       setObservations(observationsData)
       setHistory(historyData)
@@ -62,6 +73,7 @@ export function TaskDetailPage() {
     return (
       <section className="page">
         <div className="feedback error" role="alert">{error ?? 'No se encontro la tarea.'}</div>
+        {taskId && <button className="secondary-button" onClick={() => void loadDetail(taskId)}>Reintentar cargar detalle</button>}
         <Link to={backPath} className="secondary-button" style={{ alignSelf: 'flex-start' }}>
           Volver a tareas
         </Link>
@@ -104,6 +116,8 @@ export function TaskDetailPage() {
             </div>
           </dl>
 
+          {activityError && <p className="feedback error" role="alert">{activityError}</p>}
+          {(isManager || (user?.roles.includes('COLLABORATOR') && user.id === task.responsibleUserId)) && <button type="button" className="secondary-button" onClick={() => setObservationOpen(true)}>Agregar observación</button>}
           <h3 style={{ marginTop: 'var(--space-5)', marginBottom: 'var(--space-4)' }}>Observaciones</h3>
           {observations.length === 0 ? (
             <p className="page-copy">No hay observaciones registradas.</p>
@@ -139,6 +153,16 @@ export function TaskDetailPage() {
         </article>
       </div>
 
+      {observationOpen && <TaskActionModal action="observation" taskTitle={task.title}
+        onClose={() => setObservationOpen(false)} onSubmit={async content => {
+          const saved = await addObservation(task.id, { content })
+          setObservations(previous => [...previous, saved])
+          setActivityError(null)
+          if (isManager) {
+            try { setHistory(await getTaskHistory(task.id)) }
+            catch { setActivityError('La observación se guardó, pero no se pudo actualizar el historial. Recarga el detalle para reintentar.') }
+          }
+        }} />}
       <Link to={backPath} className="secondary-button" style={{ alignSelf: 'flex-start' }}>
         Volver a tareas
       </Link>

@@ -1,0 +1,10 @@
+version: 1
+name: compira-ui-audit
+slug: compira-ui-audit
+protocol: http
+port: 4946
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true

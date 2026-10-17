@@ -273,7 +273,7 @@ export function ReportsPage() {
               </div>
             </div>
 
-            <div className="table-wrapper">
+            <div className="table-wrapper" tabIndex={0} role="region" aria-label="Reporte de productividad">
               <table>
                 <thead>
                   <tr>

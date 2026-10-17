@@ -2411,3 +2411,47 @@ th[aria-sort="descending"] .sort-indicator { opacity: 1; color: var(--text-accen
     grid-template-columns: 1fr;
   }
 }
+
+/* Intrinsic grid/flex sizing must not push controls beyond the viewport. */
+.app-shell { grid-template-columns: var(--sidebar-width) minmax(0, 1fr); }
+.page, .panel, .content-body, .task-detail-grid > *, .page-header > *,
+.panel-header > *, .task-form-field, .register-form-field { min-width: 0; }
+.page, .app-modal, .notification-panel { overflow-wrap: anywhere; }
+.task-form-field :is(input, select, textarea), .register-form-field :is(input, select, textarea) { min-width: 0; max-width: 100%; }
+.table-wrapper { max-width: 100%; }
+.table-wrapper table { overflow-wrap: normal; }
+.table-wrapper th { white-space: nowrap; }
+.combobox-list { overscroll-behavior: contain; overflow-wrap: anywhere; }
+.combobox-email { overflow: visible; white-space: normal; }
+.topbar-menu-button, .topbar-actions { flex-shrink: 0; }
+.sidebar { height: 100dvh; }
+
+@media (max-width: 960px) {
+  .app-shell { grid-template-columns: minmax(0, 1fr); }
+  /* Off-screen navigation must not receive keyboard focus. */
+  .sidebar { visibility: hidden; }
+  .nav-open .sidebar { visibility: visible; }
+}
+
+@media (max-width: 640px) {
+  .page-header-actions, .filter-bar, .task-filters { width: 100%; }
+  .filter-bar > *, .task-filters .task-form-field { min-width: 0; max-width: 100%; flex: 1 1 100%; }
+  .task-filters > button { margin-left: 0; }
+  .task-form-actions, .pagination { flex-wrap: wrap; }
+  .topbar { gap: var(--space-2); }
+  .topbar-context { flex: 1; }
+  .topbar-title { overflow-wrap: anywhere; }
+  .task-action-button { min-height: 44px; }
+  .app-modal { padding: var(--space-4); }
+  .combobox-list { position: static; margin-top: var(--space-1); max-height: min(40dvh, 320px); }
+  .notification-panel-header, .notification-meta { flex-wrap: wrap; }
+  .notification-panel { max-height: calc(100dvh - var(--topbar-height) - 2rem); }
+  /* Reflow task rows, not a second copy of the actions or a clipped table. */
+  .responsive-card-table, .responsive-card-table tbody { display: block; width: 100%; }
+  .responsive-card-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .responsive-card-table tbody tr { display: block; border: 1px solid var(--border-default); border-radius: var(--radius-md); margin-bottom: var(--space-3); }
+  .responsive-card-table td { overflow-wrap: anywhere; display: block; width: 100%; padding: var(--space-3); border: 0; }
+  .responsive-card-table td[data-label]::before { content: attr(data-label); display: block; margin-bottom: var(--space-1); color: var(--text-muted); font-size: var(--fs-meta); font-weight: var(--fw-semibold); }
+  .responsive-card-table .task-actions { width: 100%; }
+  .responsive-card-table .task-actions > button { flex: 1 1 auto; }
+}

@@ -112,12 +112,12 @@ export async function approveTask(taskId: string): Promise<Task> {
   return handleResponse<Task>(response)
 }
 
-export async function addObservation(taskId: string, payload: AddObservationPayload): Promise<Task> {
+export async function addObservation(taskId: string, payload: AddObservationPayload): Promise<TaskObservation> {
   const response = await authenticatedFetch(`${tasksUrl}/${taskId}/observations`, {
     method: 'POST',
     body: JSON.stringify(payload),
   })
-  return handleResponse<Task>(response)
+  return handleResponse<TaskObservation>(response)
 }
 
 export async function getObservations(taskId: string): Promise<TaskObservation[]> {

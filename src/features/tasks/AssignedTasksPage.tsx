@@ -219,7 +219,7 @@ export function AssignedTasksPage() {
         )}
 
         <div className="table-wrapper">
-          <table>
+          <table className="responsive-card-table">
             <thead>
               <tr>
                 <th>Titulo</th>
@@ -246,13 +246,13 @@ export function AssignedTasksPage() {
 
               {!loading && filteredTasks.map((task) => (
                 <tr key={task.id}>
-                  <td>
+                  <td data-label="Título">
                     <Link to={`/tasks/${task.id}`}>{task.title}</Link>
                   </td>
-                  <td>{task.teamName ?? <span className="metric-foot">Sin equipo</span>}</td>
-                  <td><TaskStatusBadge status={task.status} overdue={task.overdue} /></td>
-                  <td>{formatDateTime(task.dueDate)}</td>
-                  <td>
+                  <td data-label="Equipo">{task.teamName ?? <span className="metric-foot">Sin equipo</span>}</td>
+                  <td data-label="Estado"><TaskStatusBadge status={task.status} overdue={task.overdue} /></td>
+                  <td data-label="Fecha límite">{formatDateTime(task.dueDate)}</td>
+                  <td data-label="Acciones">
                     <div className="task-actions">
                       {(NEXT_STATUS_ACTIONS[task.status] ?? []).map((action) => (
                         <button

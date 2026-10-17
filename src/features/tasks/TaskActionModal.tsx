@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent, RefObject } from 'react'
 import { Modal } from '../../app/Modal'
 import { TaskRequestError } from './tasksApi'
@@ -43,10 +43,17 @@ export function TaskActionModal({
   const config = ACTIONS[action]
   const isResponsible = action === 'assign' || action === 'reassign'
   const isRequired = action !== 'cancel'
+  const invalidResponsible = isResponsible && (isLoadingMembers || membersFailed || !members.some(member => member.email === value))
+
+  // The dialog can open while members are loading and the input is disabled.
+  // Focus it once ready so its existing combobox immediately presents options.
+  useEffect(() => {
+    if (isResponsible && !isLoadingMembers && !membersFailed) comboboxInputRef.current?.focus()
+  }, [isResponsible, isLoadingMembers, membersFailed])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (isSubmitting || (isRequired && !value.trim())) return
+    if (isSubmitting || invalidResponsible || (isRequired && !value.trim())) return
     setIsSubmitting(true)
     setError('')
     try {
@@ -80,6 +87,7 @@ export function TaskActionModal({
               isLoading={isLoadingMembers}
               disabled={isSubmitting || membersFailed}
               placeholder="Buscar colaborador…"
+              emptyMessage="No hay colaboradores disponibles. Agrégalos al equipo antes de asignar la tarea."
             />
           ) : (
             <textarea ref={textareaRef} id={fieldId} value={value} required={isRequired} maxLength={2000}
@@ -88,6 +96,7 @@ export function TaskActionModal({
           )}
           {!isResponsible && <span id={hintId} className="app-modal-hint">Máximo 2000 caracteres.</span>}
         </div>
+        {isResponsible && membersFailed && <p className="feedback error" role="alert">No se pudieron cargar los colaboradores. Cierra y vuelve a abrir la asignación para reintentar.</p>}
         {error && <p className="feedback error" role="alert">{error}</p>}
         {isSubmitting && <p className="app-modal-hint" role="status">Guardando cambios…</p>}
         <footer className="app-modal-actions">
@@ -95,7 +104,7 @@ export function TaskActionModal({
             {action === 'cancel' ? 'Volver' : 'Cancelar'}
           </button>
           <button type="submit" className={action === 'cancel' ? 'danger-button' : 'primary-button'}
-            disabled={isSubmitting || (isRequired && !value.trim())}>
+            disabled={isSubmitting || invalidResponsible || (isRequired && !value.trim())}>
             {isSubmitting ? 'Guardando…' : config.submit}
           </button>
         </footer>

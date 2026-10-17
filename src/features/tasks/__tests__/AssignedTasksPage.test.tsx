@@ -2,7 +2,7 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderWithProviders } from '../../../test/render'
 import { AssignedTasksPage } from '../AssignedTasksPage'
-import type { Task } from '../types'
+import type { Task, TaskObservation } from '../types'
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
@@ -155,9 +155,11 @@ describe('AssignedTasksPage', () => {
 })
 
 
+const savedObservation: TaskObservation = { id: 'o1', taskId: 't1', authorUserId: 'u1', content: 'Nota', createdAt: '2026-10-16T12:00:00Z' }
+
 it('records a trimmed multiline observation using an application modal', async () => {
   mockGetAssigned.mockResolvedValue([buildTask()])
-  vi.mocked(addObservation).mockResolvedValue(buildTask())
+  vi.mocked(addObservation).mockResolvedValue(savedObservation)
   const { user } = renderWithProviders(<AssignedTasksPage />)
   await user.click(await screen.findByRole('button', { name: 'Observacion' }))
   expect(screen.getByRole('dialog', { name: 'Agregar observación' })).toBeVisible()
@@ -176,7 +178,7 @@ it('records a trimmed multiline observation using an application modal', async (
 
 it('blocks duplicate submission and dismissal while saving an observation', async () => {
   mockGetAssigned.mockResolvedValue([buildTask()])
-  let completeSave: (task: Task) => void = () => {}
+  let completeSave: (observation: TaskObservation) => void = () => {}
   vi.mocked(addObservation).mockReturnValue(new Promise(resolve => { completeSave = resolve }))
   const { user } = renderWithProviders(<AssignedTasksPage />)
   await user.click(await screen.findByRole('button', { name: 'Observacion' }))
@@ -189,7 +191,7 @@ it('blocks duplicate submission and dismissal while saving an observation', asyn
   expect(within(dialog).getByRole('button', { name: 'Cancelar', exact: true })).toBeDisabled()
   fireEvent(dialog, new Event('cancel', { bubbles: false, cancelable: true }))
   expect(dialog).toBeVisible()
-  await act(async () => completeSave(buildTask()))
+  await act(async () => completeSave(savedObservation))
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
 })
 

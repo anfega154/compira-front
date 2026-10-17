@@ -284,7 +284,7 @@ export function DashboardPage() {
               {metrics.overdueTasks.length === 0 ? (
                 <EmptyBlock title="Sin tareas vencidas" message="Todas las tareas vigentes están dentro de su fecha límite." compact />
               ) : (
-                <div className="table-wrapper">
+                <div className="table-wrapper" tabIndex={0} role="region" aria-label="Listado del panel">
                   <table>
                     <thead>
                       <tr><th>Título</th><th>Estado</th><th>Fecha límite</th>{directoryAvailable && <th>Responsable</th>}</tr>

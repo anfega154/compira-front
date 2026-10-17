@@ -541,3 +541,11 @@
   outline: 2px solid #047857;
   outline-offset: 3px;
 }
+
+/* Six verification digits must also fit at 320px without clipping. */
+@media (max-width: 640px) {
+  .code-inputs { gap: 6px; }
+  .code-input { flex: 1 1 0; min-width: 0; max-width: 44px; padding-inline: 0; }
+  .auth-container { min-height: 100dvh; }
+  .auth-content-panel { overflow-wrap: anywhere; }
+}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useAuth } from '../auth/useAuth'
-import { addTeamMember, changeCoordinator, createTeam, getTeams, linkExistingTask, reassignTeamMember } from './teamsApi'
+import { addTeamMember, changeCoordinator, createTeam, getTeams, reassignTeamMember } from './teamsApi'
 import type { Team } from './teamsApi'
 
 export function TeamsPage() {
@@ -79,7 +79,7 @@ function TeamAdministration({ isAdministrator }: { isAdministrator: boolean }) {
 }
 
 function TeamActions({ team, isAdministrator, onCoordinatorChanged }: { team: Team; isAdministrator: boolean; onCoordinatorChanged: (team: Team) => void }) {
-  const [action, setAction] = useState<'coordinator' | 'member' | 'reassign' | 'task'>(isAdministrator ? 'coordinator' : 'member')
+  const [action, setAction] = useState<'coordinator' | 'member' | 'reassign'>(isAdministrator ? 'coordinator' : 'member')
   const [input, setInput] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -95,7 +95,6 @@ function TeamActions({ team, isAdministrator, onCoordinatorChanged }: { team: Te
       if (action === 'coordinator') onCoordinatorChanged(await changeCoordinator(team.id, input.trim()))
       else if (action === 'member') await addTeamMember(team.id, input.trim())
       else if (action === 'reassign') await reassignTeamMember(team.id, input.trim())
-      else await linkExistingTask(team.id, input.trim())
       setInput('')
       setMessage('Cambio guardado.')
     } catch (error) {
@@ -107,13 +106,12 @@ function TeamActions({ team, isAdministrator, onCoordinatorChanged }: { team: Te
     <p>Coordinador actual: <strong>{team.coordinatorEmail}</strong></p>
     <div className="task-form-field"><label htmlFor="team-action">Acción</label><select id="team-action" value={action} disabled={isSaving} onChange={event => {
       const selected = event.target.value
-      if (selected === 'coordinator' || selected === 'member' || selected === 'reassign' || selected === 'task') { setAction(selected); setInput(''); setMessage(''); setError('') }
+      if (selected === 'coordinator' || selected === 'member' || selected === 'reassign') { setAction(selected); setInput(''); setMessage(''); setError('') }
     }}>
-      {isAdministrator && <option value="coordinator">Cambiar coordinador</option>}<option value="member">Agregar colaborador al equipo</option>{isAdministrator && <option value="reassign">Reasignar colaborador a este equipo</option>}<option value="task">Vincular tarea existente sin equipo</option>
+      {isAdministrator && <option value="coordinator">Cambiar coordinador</option>}<option value="member">Agregar colaborador al equipo</option>{isAdministrator && <option value="reassign">Reasignar colaborador a este equipo</option>}
     </select></div>
-    <div className="task-form-field"><label htmlFor="team-action-value">{action === 'task' ? 'Identificador de la tarea' : 'Correo del usuario'}</label>
-      <input id="team-action-value" type={action === 'task' ? 'text' : 'email'} required value={input} disabled={isSaving} onChange={event => setInput(event.target.value)} /></div>
-    {action === 'task' && <p className="page-copy">Las tareas anteriores no tienen equipo. Vincula primero al responsable y luego registra aquí el identificador de su tarea.</p>}
+    <div className="task-form-field"><label htmlFor="team-action-value">Correo del usuario</label>
+      <input id="team-action-value" type="email" required value={input} disabled={isSaving} onChange={event => setInput(event.target.value)} /></div>
     {action === 'member' && <p className="page-copy">Un colaborador puede pertenecer a varios equipos a la vez. Si ya pertenece a este equipo, el sistema lo indicará.</p>}
     {action === 'reassign' && <p className="page-copy">Mueve a un colaborador a este equipo. Deja de pertenecer a sus equipos anteriores y queda únicamente en este.</p>}
     <button className="primary-button" disabled={isSaving}>{isSaving ? 'Guardando…' : 'Guardar cambio'}</button>

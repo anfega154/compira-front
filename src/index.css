@@ -697,7 +697,8 @@ input {
 
 /* Deadline list */
 .deadline-list,
-.overdue-list {
+.overdue-list,
+.team-member-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -706,7 +707,8 @@ input {
 }
 
 .deadline-list li,
-.overdue-list li {
+.overdue-list li,
+.team-member-list li {
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -715,7 +717,8 @@ input {
 }
 
 .deadline-list li:last-child,
-.overdue-list li:last-child {
+.overdue-list li:last-child,
+.team-member-list li:last-child {
   border-bottom: none;
 }
 

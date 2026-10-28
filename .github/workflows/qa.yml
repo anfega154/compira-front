@@ -47,6 +47,7 @@ jobs:
       cancel-in-progress: false
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
       VITE_API_URL: ${{ vars.VITE_API_URL }}
       VITE_OTP_RESEND_COOLDOWN_SECONDS: '120'
       FRONTEND_BUCKET: ${{ vars.FRONTEND_BUCKET }}
@@ -75,6 +76,9 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
-          allowed-account-ids: ${{ vars.AWS_ACCOUNT_ID }}
+      - name: Verify the authenticated AWS account
+        run: |
+          test -n "$AWS_ACCOUNT_ID"
+          test "$(aws sts get-caller-identity --query Account --output text)" = "$AWS_ACCOUNT_ID"
       - name: Publish assets then HTML and invalidate CloudFront
         run: bash scripts/deploy/qa-frontend.sh

@@ -160,7 +160,7 @@ describe('NewPasswordPage', () => {
 
   it('displays error message on API failure', async () => {
     const { AuthRequestError } = await import('../authApi')
-    mockRespondChallenge.mockRejectedValueOnce(new AuthRequestError({ code: 'AUTH_002', message: 'La contrasena no cumple con la politica definida', category: 'BAD_REQUEST' }))
+    mockRespondChallenge.mockRejectedValueOnce(new AuthRequestError({ code: 'AUTH_002', message: 'La contraseña no cumple con la política de seguridad de Compira.', category: 'BAD_REQUEST' }))
 
     const { user } = renderPage()
 
@@ -168,6 +168,6 @@ describe('NewPasswordPage', () => {
     await user.type(screen.getByLabelText(/confirmar contrasena/i), 'NewSecure12!')
     await user.click(screen.getByRole('button', { name: /establecer contrasena/i }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('La contrasena no cumple con la politica definida')
+    expect(await screen.findByRole('alert')).toHaveTextContent('La contraseña no cumple con la política de seguridad de Compira.')
   })
 })

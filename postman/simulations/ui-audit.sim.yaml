@@ -1,0 +1,5 @@
+simulation: compira-ui-audit
+routing: path
+mocks:
+  - routeKey: api
+    path: ../mocks/ui-audit/config.yaml

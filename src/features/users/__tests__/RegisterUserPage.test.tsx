@@ -16,12 +16,7 @@ vi.mock('../../auth/authApi', () => ({
   },
 }))
 
-vi.mock('../../auth/authStorage', () => ({
-  getStoredAccessToken: vi.fn(() => 'admin-token'),
-  getStoredUser: vi.fn(() => null),
-  persistSession: vi.fn(),
-  clearSession: vi.fn(),
-}))
+
 
 import { registerUser } from '../../auth/authApi'
 
@@ -36,6 +31,19 @@ afterEach(() => {
 })
 
 describe('RegisterUserPage', () => {
+  it('keeps the temporary password hidden by default and toggles without changing its value', async () => {
+    const { user } = renderWithProviders(<RegisterUserPage />)
+    const field = screen.getByLabelText('Contrasena temporal')
+    await user.type(field, 'Temporary123!')
+    expect(field).toHaveAttribute('type', 'password')
+    await user.click(screen.getByRole('button', { name: 'Mostrar contrasena' }))
+    expect(field).toHaveAttribute('type', 'text')
+    expect(field).toHaveValue('Temporary123!')
+    await user.keyboard('{Enter}')
+    expect(field).toHaveAttribute('type', 'password')
+    expect(mockRegisterUser).not.toHaveBeenCalled()
+  })
+
   it('renders all form fields', () => {
     renderWithProviders(<RegisterUserPage />)
 
@@ -96,7 +104,6 @@ describe('RegisterUserPage', () => {
         phoneNumber: '+573009876543',
         preferredMfaChannel: 'EMAIL',
       }),
-      'admin-token',
     )
 
     expect(await screen.findByRole('status')).toHaveTextContent(/maria@test\.com.*creado correctamente/i)

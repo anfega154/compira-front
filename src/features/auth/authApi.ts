@@ -1,9 +1,9 @@
+import { authenticatedFetch } from './authenticatedRequest'
 import { env } from '../../config/env'
 import type {
   AuthApiError,
   AuthResponse,
   ChallengeRequest,
-  DeleteUserRequest,
   LoginRequest,
   LogoutRequest,
   PasswordRecoveryConfirmRequest,
@@ -109,32 +109,12 @@ export async function confirmPasswordRecovery(
 
 export async function registerUser(
   payload: RegisterUserRequest,
-  accessToken: string,
 ): Promise<RegisterUserResponse> {
-  const response = await fetch(`${env.apiUrl}/auth/register`, {
+  const response = await authenticatedFetch('/auth/register', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${accessToken}`,
-    },
     body: JSON.stringify(payload),
   })
 
   return handleResponse<RegisterUserResponse>(response)
 }
 
-export async function deleteUser(
-  payload: DeleteUserRequest,
-  accessToken: string,
-): Promise<void> {
-  const response = await fetch(`${env.apiUrl}/auth/users`, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify(payload),
-  })
-
-  return handleResponse<void>(response)
-}

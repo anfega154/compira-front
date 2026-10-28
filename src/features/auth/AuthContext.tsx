@@ -1,7 +1,7 @@
-import { createContext, useCallback, useMemo, useState } from 'react'
+import { createContext, useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { logout as logoutApi } from './authApi'
-import { clearSession, getStoredAccessToken, getStoredUser, persistSession } from './authStorage'
+import { clearSession, expireSession, getSessionExpiration, getStoredAccessToken, getStoredUser, isSessionExpired, persistSession, SESSION_EXPIRED_EVENT } from './authStorage'
 import type { AuthTokens, AuthUser } from './types'
 
 type AuthContextValue = {
@@ -18,7 +18,32 @@ type AuthProviderProps = {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<AuthUser | null>(getStoredUser)
+  const [user, setUser] = useState<AuthUser | null>(() => getStoredAccessToken() && !isSessionExpired() ? getStoredUser() : null)
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    function clearExpiredUser() { setUser(null) }
+    function checkSession() {
+      clearTimeout(timer)
+      const accessToken = getStoredAccessToken()
+      if (!accessToken || isSessionExpired()) {
+        expireSession(accessToken)
+        return
+      }
+      const expiresAt = getSessionExpiration()
+      if (expiresAt !== null) timer = setTimeout(checkSession, Math.min(expiresAt - Date.now(), 2_147_483_647))
+    }
+    window.addEventListener(SESSION_EXPIRED_EVENT, clearExpiredUser)
+    window.addEventListener('focus', checkSession)
+    document.addEventListener('visibilitychange', checkSession)
+    checkSession()
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener(SESSION_EXPIRED_EVENT, clearExpiredUser)
+      window.removeEventListener('focus', checkSession)
+      document.removeEventListener('visibilitychange', checkSession)
+    }
+  }, [user])
 
   const isAuthenticated = user !== null
 
@@ -28,7 +53,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   const endSession = useCallback(async () => {
-    const accessToken = getStoredAccessToken()
+    const accessToken = isSessionExpired() ? null : getStoredAccessToken()
     clearSession()
     setUser(null)
 
@@ -36,7 +61,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         await logoutApi({ accessToken })
       } catch {
-        // Session cleared locally regardless of backend response
+        return
       }
     }
   }, [])

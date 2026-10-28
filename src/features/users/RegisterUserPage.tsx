@@ -1,7 +1,9 @@
+import { INVALID_EMAIL_MESSAGE, isValidEmail } from '../auth/emailValidation'
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { PasswordVisibilityButton } from '../auth/PasswordVisibilityButton'
 import type { FormEvent } from 'react'
 import { AuthRequestError, registerUser } from '../auth/authApi'
-import { getStoredAccessToken } from '../auth/authStorage'
 import { PasswordCriteriaTooltip } from '../auth/PasswordCriteriaTooltip'
 import { phoneCountryCodes } from '../auth/phoneCountryCodes'
 import type { UserRole } from '../auth/types'
@@ -29,8 +31,11 @@ const initialForm: FormState = {
 const PASSWORD_MIN_LENGTH = 10
 
 export function RegisterUserPage() {
+  const navigate = useNavigate()
   const [form, setForm] = useState<FormState>(initialForm)
+  const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [emailError, setEmailError] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [isPasswordFocused, setIsPasswordFocused] = useState(false)
@@ -51,16 +56,15 @@ export function RegisterUserPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (isSubmitting) return
+    if (!isValidEmail(form.email)) {
+      setEmailError(INVALID_EMAIL_MESSAGE)
+      return
+    }
+    setEmailError('')
     setError(null)
     setSuccess(null)
     setIsSubmitting(true)
-
-    const accessToken = getStoredAccessToken()
-    if (!accessToken) {
-      setError('No se encontro un token de sesion activo.')
-      setIsSubmitting(false)
-      return
-    }
 
     try {
       await registerUser(
@@ -73,7 +77,6 @@ export function RegisterUserPage() {
           preferredMfaChannel: 'EMAIL',
           roleCode: form.roleCode,
         },
-        accessToken,
       )
 
       setSuccess(`Usuario ${form.email} creado correctamente. Recibira un correo con las instrucciones.`)
@@ -99,10 +102,16 @@ export function RegisterUserPage() {
             el primer inicio de sesion.
           </p>
         </div>
+        <div className="page-header-actions">
+          <button type="button" className="secondary-button" onClick={() => navigate('/users')}>
+            Volver a Usuarios
+          </button>
+        </div>
       </header>
 
-      <article className="panel">
+      <article className="panel form-panel">
         <form className="register-user-form" onSubmit={handleSubmit} noValidate>
+          <p className="form-section-title">Datos personales</p>
           <div className="register-form-grid">
             <div className="register-form-field">
               <label htmlFor="register-first-name">Nombre</label>
@@ -136,14 +145,17 @@ export function RegisterUserPage() {
               <label htmlFor="register-email">Correo electronico</label>
               <input
                 id="register-email"
+                aria-invalid={emailError ? true : undefined}
+                aria-describedby={emailError ? "register-email-error" : undefined}
                 type="email"
                 value={form.email}
-                onChange={(e) => updateField('email', e.target.value)}
+                onChange={(e) => { updateField('email', e.target.value); setEmailError('') }}
                 placeholder="usuario@empresa.com"
                 autoComplete="off"
                 required
                 disabled={isSubmitting}
               />
+              {emailError && <span id="register-email-error" className="field-hint error" role="alert">{emailError}</span>}
             </div>
 
             <div className="register-form-field">
@@ -174,23 +186,29 @@ export function RegisterUserPage() {
                 />
               </div>
             </div>
+          </div>
 
+          <p className="form-section-title">Acceso y rol</p>
+          <div className="register-form-grid">
             <div className="register-form-field password-field-wrapper">
               <label htmlFor="register-password">Contrasena temporal</label>
-              <input
-                id="register-password"
-                type="text"
-                value={form.password}
-                onChange={(e) => updateField('password', e.target.value)}
-                placeholder="Ej: Andres5592770*"
-                minLength={PASSWORD_MIN_LENGTH}
-                maxLength={128}
-                autoComplete="off"
-                required
-                disabled={isSubmitting}
-                onFocus={() => setIsPasswordFocused(true)}
-                onBlur={() => setIsPasswordFocused(false)}
-              />
+              <div className="input-wrapper">
+                <input
+                  id="register-password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={(e) => updateField('password', e.target.value)}
+                  placeholder="Ej: Andres5592770*"
+                  minLength={PASSWORD_MIN_LENGTH}
+                  maxLength={128}
+                  autoComplete="off"
+                  required
+                  disabled={isSubmitting}
+                  onFocus={() => setIsPasswordFocused(true)}
+                  onBlur={() => setIsPasswordFocused(false)}
+                />
+                <PasswordVisibilityButton visible={showPassword} onToggle={() => setShowPassword(prev => !prev)} disabled={isSubmitting} />
+              </div>
               <PasswordCriteriaTooltip password={form.password} visible={isPasswordFocused} />
               <span className="field-hint">El usuario la cambiara en su primer inicio de sesion</span>
             </div>

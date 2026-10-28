@@ -36,6 +36,26 @@ afterEach(() => {
 })
 
 describe('LoginPage', () => {
+  it.each(['user', 'user@', '@gmail.com', 'user@gmail', 'user.com', 'user@@gmail.com', 'user@-gmail.com', 'user@gmail..com'])('rejects incomplete email %s before sending credentials', async (email) => {
+    const { user } = renderWithProviders(<LoginPage />)
+    const emailField = screen.getByLabelText('Correo electronico')
+    await user.type(emailField, email)
+    await user.type(screen.getByLabelText('Contrasena'), 'Password123!')
+    await user.click(screen.getByRole('button', { name: /iniciar sesion/i }))
+    expect(screen.getByRole('alert')).toHaveTextContent('El correo electrónico no tiene un formato válido')
+    expect(emailField).toHaveAttribute('aria-invalid', 'true')
+    expect(mockLogin).not.toHaveBeenCalled()
+  })
+
+  it.each(['user@gmail.com', 'user@hotmail.com', 'user.name@company.com', 'user.name+test@gmail.com'])('accepts standard email %s', async (email) => {
+    mockLogin.mockResolvedValueOnce({ status: 'CHALLENGE_REQUIRED', user: null, tokens: null, challenge: { challengeName: 'EMAIL_OTP', session: 'session', availableMfaChannels: ['EMAIL'], codeDeliveryDetails: null } })
+    const { user } = renderWithProviders(<LoginPage />)
+    await user.type(screen.getByLabelText('Correo electronico'), email)
+    await user.type(screen.getByLabelText('Contrasena'), 'Password123!')
+    await user.click(screen.getByRole('button', { name: /iniciar sesion/i }))
+    expect(mockLogin).toHaveBeenCalledWith({ email, password: 'Password123!' })
+  })
+
   it('renders login form with email and password fields', () => {
     renderWithProviders(<LoginPage />)
 
@@ -71,11 +91,13 @@ describe('LoginPage', () => {
 
     const passwordInput = screen.getByLabelText('Contrasena')
     expect(passwordInput).toHaveAttribute('type', 'password')
+    await user.type(passwordInput, 'KeepValue123!')
 
     await user.click(screen.getByRole('button', { name: /mostrar contrasena/i }))
     expect(passwordInput).toHaveAttribute('type', 'text')
+    expect(passwordInput).toHaveValue('KeepValue123!')
 
-    await user.click(screen.getByRole('button', { name: /ocultar contrasena/i }))
+    await user.keyboard('{Enter}')
     expect(passwordInput).toHaveAttribute('type', 'password')
   })
 

@@ -1,8 +1,9 @@
+import { persistSession } from '../authStorage'
+import { module3Tokens, module3User } from '../../../test/module3TestData'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   AuthRequestError,
   confirmPasswordRecovery,
-  deleteUser,
   login,
   logout,
   registerUser,
@@ -14,7 +15,9 @@ import {
 const mockFetch = vi.fn()
 
 beforeEach(() => {
+  mockFetch.mockReset()
   vi.stubGlobal('fetch', mockFetch)
+  persistSession(module3User('ADMINISTRATOR'), { ...module3Tokens, accessToken: 'admin-token' })
 })
 
 afterEach(() => {
@@ -160,6 +163,12 @@ describe('authApi', () => {
   })
 
   describe('confirmPasswordRecovery', () => {
+    it('preserves the clean password policy message returned by the backend', async () => {
+      mockFetch.mockReturnValueOnce(jsonResponse({ code: 'AUTH_002', message: 'La contraseña no cumple con la política de seguridad de Compira.' }, 400))
+      await expect(confirmPasswordRecovery({ email: 'user@test.com', confirmationCode: '123456', newPassword: 'weakpassword' }))
+        .rejects.toThrow('La contraseña no cumple con la política de seguridad de Compira.')
+    })
+
     it('sends confirmation payload and handles 204', async () => {
       mockFetch.mockReturnValueOnce(noContentResponse())
 
@@ -185,16 +194,16 @@ describe('authApi', () => {
 
       const result = await registerUser(
         { email: 'new@test.com', password: 'Temp1234!*', firstName: 'Ana', lastName: 'Lopez', phoneNumber: '+573001234567', preferredMfaChannel: 'EMAIL' },
-        'admin-token',
       )
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/auth/register'),
         expect.objectContaining({
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer admin-token' },
+          headers: expect.any(Headers),
         }),
       )
+      expect(new Headers(mockFetch.mock.calls[0][1].headers).get('Authorization')).toBe('Bearer admin-token')
       expect(result.cognitoSub).toBe('sub-123')
     })
 
@@ -203,32 +212,8 @@ describe('authApi', () => {
       mockFetch.mockReturnValueOnce(jsonResponse(errorBody, 409))
 
       await expect(
-        registerUser({ email: 'dup@test.com', password: 'x', firstName: 'A', lastName: 'B', phoneNumber: '+571', preferredMfaChannel: 'EMAIL' }, 'token'),
+        registerUser({ email: 'dup@test.com', password: 'x', firstName: 'A', lastName: 'B', phoneNumber: '+571', preferredMfaChannel: 'EMAIL' }),
       ).rejects.toThrow('Ya existe una cuenta registrada')
-    })
-  })
-
-  describe('deleteUser', () => {
-    it('sends DELETE request with email and auth header', async () => {
-      mockFetch.mockReturnValueOnce(noContentResponse())
-
-      await expect(deleteUser({ email: 'del@test.com' }, 'admin-token')).resolves.toBeUndefined()
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/auth/users'),
-        expect.objectContaining({
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer admin-token' },
-          body: JSON.stringify({ email: 'del@test.com' }),
-        }),
-      )
-    })
-
-    it('throws on user not found', async () => {
-      const errorBody = { code: 'AUTH_007', message: 'No se encontro una cuenta asociada al usuario enviado', category: 'NOT_FOUND' }
-      mockFetch.mockReturnValueOnce(jsonResponse(errorBody, 404))
-
-      await expect(deleteUser({ email: 'nobody@test.com' }, 'token')).rejects.toThrow('No se encontro')
     })
   })
 })

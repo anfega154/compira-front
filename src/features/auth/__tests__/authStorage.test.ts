@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clearSession, getStoredAccessToken, getStoredUser, persistSession } from '../authStorage'
+import { clearSession, getStoredAccessToken, getStoredUser, isSessionExpired, persistSession } from '../authStorage'
 import type { AuthTokens, AuthUser } from '../types'
 
 const mockUser: AuthUser = {
@@ -26,6 +26,23 @@ const mockTokens: AuthTokens = {
 }
 
 describe('authStorage', () => {
+  it('detects JWT expiry for sessions created before expiry metadata existed', () => {
+    const payload = btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) - 60 }))
+    sessionStorage.setItem('compira_access_token', `header.${payload}.signature`)
+    expect(isSessionExpired()).toBe(true)
+  })
+
+  it('uses the JWT deadline even when the reported lifetime is longer', () => {
+    const payload = btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) - 1 }))
+    persistSession(mockUser, { ...mockTokens, accessToken: `header.${payload}.signature` })
+    expect(isSessionExpired()).toBe(true)
+  })
+
+  it('does not discard tokens whose expiration cannot be read locally', () => {
+    sessionStorage.setItem('compira_access_token', 'malformed.payload.signature')
+    expect(isSessionExpired()).toBe(false)
+  })
+
   describe('persistSession', () => {
     it('stores user and tokens in sessionStorage', () => {
       persistSession(mockUser, mockTokens)

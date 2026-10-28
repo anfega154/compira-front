@@ -39,6 +39,14 @@ afterEach(() => {
 
 describe('PasswordRecoveryPage', () => {
   describe('request step', () => {
+    it('rejects a domain without extension before requesting a recovery code', async () => {
+      const { user } = renderWithProviders(<PasswordRecoveryPage />)
+      await user.type(screen.getByLabelText('Correo electronico'), 'user@gmail')
+      await user.click(screen.getByRole('button', { name: /enviar codigo/i }))
+      expect(screen.getByRole('alert')).toHaveTextContent('El correo electrónico no tiene un formato válido')
+      expect(mockRequestRecovery).not.toHaveBeenCalled()
+    })
+
     it('renders email input and submit button', () => {
       renderWithProviders(<PasswordRecoveryPage />)
 

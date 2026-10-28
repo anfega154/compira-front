@@ -118,6 +118,8 @@ export type AuthErrorCode =
   | 'AUTH_012'
   | 'AUTH_013'
   | 'AUTH_014'
+  | 'AUTH_015'
+  | 'AUTH_016'
 
 export type AuthApiError = {
   code: AuthErrorCode
@@ -139,8 +141,4 @@ export type RegisterUserResponse = {
   cognitoSub: string
   userConfirmed: boolean
   codeDeliveryDetails: CodeDeliveryDetails
-}
-
-export type DeleteUserRequest = {
-  email: string
 }

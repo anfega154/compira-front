@@ -7,10 +7,12 @@ Proyecto base frontend con:
 - Vite
 - React Router
 
-Incluye una pantalla inicial para:
+La pantalla inicial muestra las tareas según el rol:
 
-- listar empresas desde el backend
-- crear empresas consumiendo `POST /api/v1/companies`
+- Administrador y Coordinador: tareas del equipo.
+- Colaborador: tareas asignadas.
+
+COMPIRA administra una única organización por despliegue; no incluye registro ni listado de empresas.
 
 ## Configuración
 

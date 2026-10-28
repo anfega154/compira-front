@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { PasswordVisibilityButton } from './PasswordVisibilityButton'
+import { INVALID_EMAIL_MESSAGE, isValidEmail } from './emailValidation'
 import { Link, useNavigate } from 'react-router-dom'
 import { AuthRequestError, login } from './authApi'
 import { useAuth } from './useAuth'
@@ -13,10 +15,17 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [emailError, setEmailError] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (isSubmitting) return
+    if (!isValidEmail(email)) {
+      setEmailError(INVALID_EMAIL_MESSAGE)
+      return
+    }
+    setEmailError('')
     setError(null)
     setIsSubmitting(true)
 
@@ -64,14 +73,17 @@ export function LoginPage() {
           <label htmlFor="login-email">Correo electronico</label>
           <input
             id="login-email"
+            aria-invalid={emailError ? true : undefined}
+            aria-describedby={emailError ? "login-email-error" : undefined}
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => { setEmail(e.target.value); setEmailError('') }}
             placeholder="tu@empresa.com"
             autoComplete="email"
             required
             disabled={isSubmitting}
           />
+          {emailError && <span id="login-email-error" className="field-hint error" role="alert">{emailError}</span>}
         </div>
 
         <div className="form-group">
@@ -87,14 +99,7 @@ export function LoginPage() {
               required
               disabled={isSubmitting}
             />
-            <button
-              type="button"
-              className="toggle-password"
-              onClick={() => setShowPassword((prev) => !prev)}
-              aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
-            >
-              {showPassword ? '🙈' : '👁'}
-            </button>
+            <PasswordVisibilityButton visible={showPassword} onToggle={() => setShowPassword(prev => !prev)} disabled={isSubmitting} />
           </div>
         </div>
 

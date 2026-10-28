@@ -4,15 +4,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../App'
 import { getStoredUser, persistSession } from '../../features/auth/authStorage'
 import type { UserRole } from '../../features/auth/types'
-import { module3Stream, module3Tokens, module3User } from '../../test/module3TestData'
+import { module3Tokens, module3User } from '../../test/module3TestData'
 import { renderWithProviders } from '../../test/render'
 
 const fetchMock = vi.fn()
 
 beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock)
-  fetchMock.mockImplementation((url: string, options?: RequestInit) => {
-    if (url.endsWith('/notifications/stream')) return Promise.resolve(module3Stream(options?.signal).response)
+  fetchMock.mockImplementation((url: string) => {
+    if (url.endsWith('/notifications')) return Promise.resolve(Response.json([]))
     if (url.endsWith('/tasks') || url.endsWith('/tasks/assigned')) return Promise.resolve(new Response('[]'))
     throw new Error(`Unexpected request: ${url}`)
   })
@@ -92,8 +92,8 @@ describe('User management permissions', () => {
   })
 
   it('exposes user registration as an action inside the Users view', async () => {
-    fetchMock.mockImplementation((url: string, options?: RequestInit) => {
-      if (url.endsWith('/notifications/stream')) return Promise.resolve(module3Stream(options?.signal).response)
+    fetchMock.mockImplementation((url: string) => {
+      if (url.endsWith('/notifications')) return Promise.resolve(Response.json([]))
       if (url.includes('/users')) return Promise.resolve(Response.json([]))
       throw new Error(`Unexpected request: ${url}`)
     })
@@ -127,7 +127,7 @@ describe('First login', () => {
         expect(request).toMatchObject({ challengeName: 'EMAIL_OTP', session: 'otp-session', code: '123456' })
         return Promise.resolve(Response.json({ status: 'AUTHENTICATED', user: authenticatedUser, tokens: module3Tokens }))
       }
-      if (url.endsWith('/notifications/stream')) return Promise.resolve(module3Stream(options?.signal).response)
+      if (url.endsWith('/notifications')) return Promise.resolve(Response.json([]))
       if (url.endsWith('/tasks/assigned')) return Promise.resolve(Response.json([]))
       throw new Error(`Unexpected request: ${url}`)
     })
@@ -173,8 +173,8 @@ describe('HU-12 · Create task: access permissions (E8)', () => {
    * Result: the Título field and the "Crear tarea" button are shown.
    */
   it('allows a coordinator to open /tasks/create', async () => {
-    fetchMock.mockImplementation((url: string, options?: RequestInit) => {
-      if (url.endsWith('/notifications/stream')) return Promise.resolve(module3Stream(options?.signal).response)
+    fetchMock.mockImplementation((url: string) => {
+      if (url.endsWith('/notifications')) return Promise.resolve(Response.json([]))
       if (url.includes('/teams')) return Promise.resolve(new Response('[]'))
       if (url.includes('/organization/settings')) return Promise.resolve(Response.json({ timeZone: null, notificationsEnabled: true }))
       throw new Error(`Unexpected request: ${url}`)

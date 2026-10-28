@@ -14,10 +14,14 @@ http.createServer(async (req, res) => {
   const reply = (body, status = 200) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(status === 204 ? undefined : JSON.stringify(body)); };
   const task = await pm.state.get('compira.task') || baseTask;
   const observations = await pm.state.get('compira.observations') || [];
-  if (path === '/v1/notifications/stream') {
-    res.writeHead(200, { 'Content-Type': 'text/event-stream' });
-    res.write(`data: ${JSON.stringify([{ id: '1', taskId: 'task-1', taskTitle: baseTask.title, type: 'ASSIGNED', createdAt: baseTask.createdAt, readAt: null }])}\n\n`);
-    return;
+  if (path === '/v1/notifications' && req.method === 'GET') {
+    const readAt = await pm.state.get('compira.notificationReadAt') || null;
+    const before = new URL(req.url, 'http://localhost').searchParams.get('before');
+    return reply(before && BigInt(before) <= 1n ? [] : [{ id: '1', taskId: 'task-1', taskTitle: baseTask.title, type: 'ASSIGNED', createdAt: baseTask.createdAt, readAt }]);
+  }
+  if (req.method === 'POST' && ['/v1/notifications/1/read', '/v1/notifications/read-all'].includes(path)) {
+    await pm.state.set('compira.notificationReadAt', new Date().toISOString());
+    return reply(null, 204);
   }
   if (path === '/v1/tasks/indicators') return reply({ totalTasks: 1, overdueCount: 0, dueSoonCount: 0, closedCount: 0, closedOnTimeCount: 0, compliancePercentage: null, workloadByAssignee: [{ assigneeId: 'user-1', assigneeName: 'Ana García', assigneeEmail: member.email, taskCount: 1 }], assignees: [{ id: 'user-1', name: 'Ana García', email: member.email }] });
   if (path === '/v1/tasks/reports') return reply({ rows: [{ assigneeId: 'user-1', assigneeName: 'Ana García', assigneeEmail: member.email, totalTasks: 1, activeTasks: 1, closedTasks: 0, closedOnTimeTasks: 0, overdueTasks: 0, compliancePercentage: null, averageClosureHours: null }] });

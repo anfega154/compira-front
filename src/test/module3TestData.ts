@@ -10,15 +10,3 @@ export function module3Notification(type: TaskNotification['type'] = 'ASSIGNED',
   return { id, taskId: 'task-1', taskTitle: 'Informe mensual', type, createdAt: '2026-09-26T12:00:00Z', readAt: null }
 }
 export const module3Team: Team = { id: 'team-1', name: 'Operaciones', coordinatorUserId: 'coordinator-1', coordinatorEmail: 'coordinator@compira.co' }
-
-export function module3Stream(signal?: AbortSignal | null) {
-  let controller: ReadableStreamDefaultController<Uint8Array>
-  const stream = new ReadableStream<Uint8Array>({ start(value) { controller = value } })
-  signal?.addEventListener('abort', () => controller.error(new DOMException('Aborted', 'AbortError')), { once: true })
-  return {
-    response: new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }),
-    send(notifications: TaskNotification[]) { controller.enqueue(new TextEncoder().encode(`event: notifications\ndata: ${JSON.stringify(notifications)}\n\n`)) },
-    chunk(text: string) { controller.enqueue(new TextEncoder().encode(text)) },
-    close() { controller.close() },
-  }
-}

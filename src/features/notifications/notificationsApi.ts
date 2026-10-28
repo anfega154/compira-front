@@ -43,31 +43,14 @@ export async function getOlderNotifications(before: string, signal: AbortSignal)
   return parseNotifications(await response.json())
 }
 
-export async function streamNotifications(signal: AbortSignal, onSnapshot: (notifications: TaskNotification[]) => void): Promise<void> {
-  const response = await authenticatedRequest(`${BASE}/stream`, { signal, headers: { Accept: 'text/event-stream' } })
-  if (!response.body) throw new Error('No se pudo abrir la conexión de notificaciones.')
-  const reader = response.body.getReader()
-  const decoder = new TextDecoder()
-  let buffer = ''
-  try {
-    while (!signal.aborted) {
-      const { done, value } = await reader.read()
-      if (done) break
-      buffer += decoder.decode(value, { stream: true })
-      buffer = buffer.replace(/\r\n/g, '\n')
-      if (buffer.length > 1_000_000) throw new Error('Respuesta de notificaciones inválida.')
-      let boundary = buffer.indexOf('\n\n')
-      while (boundary >= 0) {
-        const event = buffer.slice(0, boundary)
-        buffer = buffer.slice(boundary + 2)
-        const payload = event.split('\n').filter(line => line.startsWith('data:')).map(line => line.slice(5).trimStart()).join('\n')
-        if (payload && !signal.aborted) onSnapshot(parseNotifications(JSON.parse(payload)))
-        boundary = buffer.indexOf('\n\n')
-      }
-    }
-    if (!signal.aborted) throw new Error('Se interrumpió la conexión de notificaciones.')
-  } finally {
-    await reader.cancel().catch(() => undefined)
-    reader.releaseLock()
-  }
+export const NOTIFICATION_POLL_INTERVAL_MS = 30_000
+const NOTIFICATION_REQUEST_TIMEOUT_MS = 15_000
+
+export async function getLatestNotifications(signal: AbortSignal): Promise<TaskNotification[]> {
+  const response = await authenticatedRequest(BASE, {
+    signal: AbortSignal.any([signal, AbortSignal.timeout(NOTIFICATION_REQUEST_TIMEOUT_MS)]),
+    cache: 'no-store',
+    headers: { Accept: 'application/json' },
+  })
+  return parseNotifications(await response.json())
 }

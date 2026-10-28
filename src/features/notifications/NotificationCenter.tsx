@@ -8,7 +8,8 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
   NOTIFICATION_PAGE_SIZE,
-  streamNotifications,
+  getLatestNotifications,
+  NOTIFICATION_POLL_INTERVAL_MS,
 } from './notificationsApi'
 import type { TaskNotification } from './notificationsApi'
 import './notifications.css'
@@ -40,10 +41,9 @@ export function NotificationCenter() {
   useEffect(() => {
     const controller = new AbortController()
     let timer: ReturnType<typeof setTimeout> | undefined
-    let retryDelay = 1000
-    function connect() {
-      void streamNotifications(controller.signal, page => {
-        retryDelay = 1000
+    function refresh() {
+      void getLatestNotifications(controller.signal).then(page => {
+        if (controller.signal.aborted) return
         setStatus('connected')
         const hasGap = latestPage.current.length > 0 && page.length === NOTIFICATION_PAGE_SIZE
           && !page.some(notification => latestPage.current.some(previous => previous.id === notification.id))
@@ -58,6 +58,7 @@ export function NotificationCenter() {
           hasLoadedOlder.current = false
         }
         if (!hasLoadedOlder.current) setHasOlder(page.length === NOTIFICATION_PAGE_SIZE)
+        timer = setTimeout(refresh, NOTIFICATION_POLL_INTERVAL_MS)
       }).catch(error => {
         if (controller.signal.aborted) return
         if (error instanceof ApiRequestError && error.status === 401) {
@@ -70,11 +71,10 @@ export function NotificationCenter() {
           return
         }
         setStatus('reconnecting')
-        timer = setTimeout(connect, retryDelay)
-        retryDelay = Math.min(retryDelay * 2, 30000)
+        timer = setTimeout(refresh, NOTIFICATION_POLL_INTERVAL_MS)
       })
     }
-    connect()
+    refresh()
     return () => {
       controller.abort()
       pagination.current?.abort()
@@ -110,7 +110,7 @@ export function NotificationCenter() {
     try {
       await markNotificationRead(id)
     } catch {
-      /* el próximo snapshot del stream reconcilia el estado real */
+      /* la próxima consulta reconcilia el estado real */
     }
   }
 
@@ -121,7 +121,7 @@ export function NotificationCenter() {
     try {
       await markAllNotificationsRead()
     } catch {
-      /* el próximo snapshot del stream reconcilia el estado real */
+      /* la próxima consulta reconcilia el estado real */
     }
   }
 
@@ -148,8 +148,8 @@ export function NotificationCenter() {
           )}
         </div>
         <p className="notification-connection" role="status">
-          {status === 'loading' ? 'Conectando…' : status === 'reconnecting' ? 'Conexión interrumpida. Reconectando…'
-            : status === 'error' ? 'No tienes acceso a las notificaciones.' : 'Actualizadas en tiempo real'}
+          {status === 'loading' ? 'Consultando avisos…' : status === 'reconnecting' ? 'No se pudieron actualizar los avisos. Reintentando en 30 segundos…'
+            : status === 'error' ? 'No tienes acceso a las notificaciones.' : 'Actualizadas cada 30 segundos'}
         </p>
         {status === 'error' && <button type="button" className="secondary-button" onClick={() => setAttempt(attempt + 1)}>Reintentar</button>}
         {status === 'connected' && notifications.length === 0 && <p>No hay notificaciones disponibles.</p>}

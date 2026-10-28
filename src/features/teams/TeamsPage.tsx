@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useAuth } from '../auth/useAuth'
-import { addTeamMember, changeCoordinator, createTeam, getTeams, reassignTeamMember } from './teamsApi'
-import type { Team } from './teamsApi'
+import { addTeamMember, changeCoordinator, createTeam, getTeamMembers, getTeams, reassignTeamMember } from './teamsApi'
+import type { Team, TeamMember } from './teamsApi'
+import { teamMemberName } from './teamMemberName'
 
 export function TeamsPage() {
   const { user } = useAuth()
@@ -84,6 +85,7 @@ function TeamActions({ team, isAdministrator, onCoordinatorChanged }: { team: Te
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [membersVersion, setMembersVersion] = useState(0)
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -93,8 +95,10 @@ function TeamActions({ team, isAdministrator, onCoordinatorChanged }: { team: Te
     setError('')
     try {
       if (action === 'coordinator') onCoordinatorChanged(await changeCoordinator(team.id, input.trim()))
-      else if (action === 'member') await addTeamMember(team.id, input.trim())
-      else if (action === 'reassign') await reassignTeamMember(team.id, input.trim())
+      else {
+        await (action === 'member' ? addTeamMember : reassignTeamMember)(team.id, input.trim())
+        setMembersVersion(version => version + 1)
+      }
       setInput('')
       setMessage('Cambio guardado.')
     } catch (error) {
@@ -104,6 +108,7 @@ function TeamActions({ team, isAdministrator, onCoordinatorChanged }: { team: Te
 
   return <form className="register-user-form" onSubmit={handleSubmit}>
     <p>Coordinador actual: <strong>{team.coordinatorEmail}</strong></p>
+    <TeamMembers teamId={team.id} version={membersVersion} />
     <div className="task-form-field"><label htmlFor="team-action">Acción</label><select id="team-action" value={action} disabled={isSaving} onChange={event => {
       const selected = event.target.value
       if (selected === 'coordinator' || selected === 'member' || selected === 'reassign') { setAction(selected); setInput(''); setMessage(''); setError('') }
@@ -117,4 +122,30 @@ function TeamActions({ team, isAdministrator, onCoordinatorChanged }: { team: Te
     <button className="primary-button" disabled={isSaving}>{isSaving ? 'Guardando…' : 'Guardar cambio'}</button>
     {message && <p className="feedback success" role="status">{message}</p>}{error && <p className="feedback error" role="alert">{error}</p>}
   </form>
+}
+
+function TeamMembers({ teamId, version }: { teamId: string; version: number }) {
+  const [members, setMembers] = useState<TeamMember[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const controller = new AbortController()
+    setIsLoading(true)
+    setError('')
+    void getTeamMembers(teamId, controller.signal).then(response => {
+      if (!controller.signal.aborted) setMembers(response)
+    }).catch(error => {
+      if (!controller.signal.aborted) setError(error instanceof Error ? error.message : 'No se pudieron cargar los colaboradores del equipo.')
+    }).finally(() => {
+      if (!controller.signal.aborted) setIsLoading(false)
+    })
+    return () => controller.abort()
+  }, [teamId, version])
+
+  return <section aria-labelledby="team-members-title"><h4 id="team-members-title">Colaboradores del equipo</h4>
+    {isLoading ? <p role="status">Cargando colaboradores…</p> : error ? <p className="feedback error" role="alert">{error}</p>
+      : members.length === 0 ? <p className="page-copy">Este equipo no tiene colaboradores.</p>
+      : <ul className="team-member-list" aria-labelledby="team-members-title">{members.map(member => <li key={member.id}><strong>{teamMemberName(member)}</strong><span>{member.email}</span></li>)}</ul>}
+  </section>
 }

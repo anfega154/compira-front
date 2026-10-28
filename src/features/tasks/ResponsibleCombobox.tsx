@@ -1,5 +1,6 @@
 import { SearchCombobox } from '../../app/SearchCombobox'
 import type { RefObject } from 'react'
+import { teamMemberName } from '../teams/teamMemberName'
 import type { TeamMember } from '../teams/teamsApi'
 
 type ResponsibleComboboxProps = {
@@ -14,11 +15,6 @@ type ResponsibleComboboxProps = {
   inputRef?: RefObject<HTMLInputElement | null>
 }
 
-function fullName(member: TeamMember): string {
-  const name = [member.firstName, member.lastName].filter(Boolean).join(' ').trim()
-  return name || member.email
-}
-
 function initials(member: TeamMember): string {
   const first = member.firstName?.trim()[0]
   const last = member.lastName?.trim()[0]
@@ -28,7 +24,7 @@ function initials(member: TeamMember): string {
 
 export function ResponsibleCombobox({ members, emptyMessage, ...props }: ResponsibleComboboxProps) {
   return <SearchCombobox {...props}
-    options={members.map(member => ({ value: member.email, label: fullName(member), description: member.email, avatar: initials(member) }))}
+    options={members.map(member => ({ value: member.email, label: teamMemberName(member), description: member.email, avatar: initials(member) }))}
     placeholder={props.placeholder ?? 'Buscar colaborador…'}
     loadingMessage="Cargando colaboradores…"
     emptyMessage={emptyMessage ?? 'Este equipo aún no tiene colaboradores. Puedes crear la tarea sin responsable.'}

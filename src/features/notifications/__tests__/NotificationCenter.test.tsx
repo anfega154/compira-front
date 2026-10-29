@@ -26,6 +26,16 @@ function openPanel() {
 }
 
 describe('NotificationCenter', () => {
+  it('renders completion and observation notifications for the coordinator', async () => {
+    persistSession(module3User('COORDINATOR'), module3Tokens)
+    fetchMock.mockResolvedValue(Response.json([module3Notification('TASK_COMPLETED', '2'), module3Notification('OBSERVATION_ADDED', '1')]))
+    await mount()
+    openPanel()
+    expect(screen.getByText('Tarea completada por el colaborador')).toBeVisible()
+    expect(screen.getByText('Nueva observación en la tarea')).toBeVisible()
+    expect(screen.getByLabelText('2 avisos sin leer')).toHaveTextContent('2')
+  })
+
   it('loads immediately with authentication and updates every 30 seconds without requesting SSE', async () => {
     fetchMock.mockImplementation(() => Promise.resolve(Response.json([module3Notification()])))
     await mount()

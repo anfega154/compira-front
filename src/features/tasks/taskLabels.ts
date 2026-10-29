@@ -32,3 +32,10 @@ export function formatDateTime(value: string | null): string {
   if (!value) return 'Sin fecha'
   return new Date(value).toLocaleString()
 }
+
+export function formatActivityAuthor(userId: string | null, name?: string | null, email?: string | null): string {
+  if (userId === null) return 'Sistema (automático)'
+  const displayName = name?.trim()
+  if (displayName && email) return `${displayName} (${email})`
+  return displayName || email || 'Usuario no disponible'
+}

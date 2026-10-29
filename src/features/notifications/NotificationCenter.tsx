@@ -13,6 +13,8 @@ import {
 } from './notificationsApi'
 import type { TaskNotification } from './notificationsApi'
 import './notifications.css'
+import { env } from '../../config/env'
+import { startNotificationRealtime } from './notificationRealtime'
 
 const LABELS: Record<TaskNotification['type'], string> = {
   ASSIGNED: 'Se te asignó la tarea', REASSIGNED: 'Se te reasignó la tarea',
@@ -33,6 +35,8 @@ export function NotificationCenter() {
   const { endSession } = useAuth()
   const [notifications, setNotifications] = useState<TaskNotification[]>([])
   const [status, setStatus] = useState<'loading' | 'connected' | 'reconnecting' | 'error'>('loading')
+  const [realtimeConnected, setRealtimeConnected] = useState(false)
+  const refreshLatest = useRef<() => void>(() => {})
   const [attempt, setAttempt] = useState(0)
   const [hasOlder, setHasOlder] = useState(false)
   const [isLoadingOlder, setIsLoadingOlder] = useState(false)
@@ -44,9 +48,19 @@ export function NotificationCenter() {
   useEffect(() => {
     const controller = new AbortController()
     let timer: ReturnType<typeof setTimeout> | undefined
+    let connected = false
+    let loading = false
+    let pending = false
+    let forbidden = false
+    let refreshFailed = false
     function refresh() {
+      if (controller.signal.aborted || forbidden) return
+      if (loading) { pending = true; return }
+      clearTimeout(timer)
+      loading = true
       void getLatestNotifications(controller.signal).then(page => {
-        if (controller.signal.aborted) return
+        if (controller.signal.aborted || forbidden) return
+        refreshFailed = false
         setStatus('connected')
         const hasGap = latestPage.current.length > 0 && page.length === NOTIFICATION_PAGE_SIZE
           && !page.some(notification => latestPage.current.some(previous => previous.id === notification.id))
@@ -61,24 +75,46 @@ export function NotificationCenter() {
           hasLoadedOlder.current = false
         }
         if (!hasLoadedOlder.current) setHasOlder(page.length === NOTIFICATION_PAGE_SIZE)
-        timer = setTimeout(refresh, NOTIFICATION_POLL_INTERVAL_MS)
       }).catch(error => {
         if (controller.signal.aborted) return
         if (error instanceof ApiRequestError && error.status === 401) {
+          forbidden = true
           void endSession()
           return
         }
         if (error instanceof ApiRequestError && error.status === 403) {
+          forbidden = true
           setNotifications([])
           setStatus('error')
           return
         }
+        refreshFailed = true
         setStatus('reconnecting')
-        timer = setTimeout(refresh, NOTIFICATION_POLL_INTERVAL_MS)
+      }).finally(() => {
+        loading = false
+        if (controller.signal.aborted || forbidden) return
+        if (pending) { pending = false; refresh() }
+        else if (!connected || refreshFailed) timer = setTimeout(refresh, NOTIFICATION_POLL_INTERVAL_MS)
       })
     }
+    refreshLatest.current = refresh
     refresh()
+    const stopRealtime = env.notificationsRealtimeEnabled ? startNotificationRealtime({
+      changed: refresh,
+      status: active => {
+        connected = active
+        setRealtimeConnected(active)
+        clearTimeout(timer)
+        if (!active && !loading && !forbidden) timer = setTimeout(refresh, NOTIFICATION_POLL_INTERVAL_MS)
+      },
+      denied: code => {
+        if (code === 401) void endSession()
+        else { forbidden = true; setNotifications([]); setStatus('error'); clearTimeout(timer) }
+      },
+    }) : () => {}
     return () => {
+      stopRealtime()
+      refreshLatest.current = () => {}
       controller.abort()
       pagination.current?.abort()
       clearTimeout(timer)
@@ -113,7 +149,7 @@ export function NotificationCenter() {
     try {
       await markNotificationRead(id)
     } catch {
-      /* la próxima consulta reconcilia el estado real */
+      refreshLatest.current()
     }
   }
 
@@ -124,7 +160,7 @@ export function NotificationCenter() {
     try {
       await markAllNotificationsRead()
     } catch {
-      /* la próxima consulta reconcilia el estado real */
+      refreshLatest.current()
     }
   }
 
@@ -152,7 +188,7 @@ export function NotificationCenter() {
         </div>
         <p className="notification-connection" role="status">
           {status === 'loading' ? 'Consultando avisos…' : status === 'reconnecting' ? 'No se pudieron actualizar los avisos. Reintentando en 30 segundos…'
-            : status === 'error' ? 'No tienes acceso a las notificaciones.' : 'Actualizadas cada 30 segundos'}
+            : status === 'error' ? 'No tienes acceso a las notificaciones.' : realtimeConnected ? 'Notificaciones en tiempo real' : 'Actualizadas cada 30 segundos'}
         </p>
         {status === 'error' && <button type="button" className="secondary-button" onClick={() => setAttempt(attempt + 1)}>Reintentar</button>}
         {status === 'connected' && notifications.length === 0 && <p>No hay notificaciones disponibles.</p>}

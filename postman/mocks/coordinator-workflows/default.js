@@ -18,6 +18,7 @@ http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
   const path = new URL(req.url, 'http://localhost').pathname;
   const reply = (body, status = 200) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(status === 204 ? undefined : JSON.stringify(body)); };
+  if (req.method === 'POST' && path === '/v1/notifications/realtime-ticket') return reply({ url: 'ws://127.0.0.1:4953?ticket=fixture-not-a-real-ticket', expiresAt: new Date(Date.now() + 3600000).toISOString() });
   const task = await pm.state.get(prefix + 'task') || originalTask;
   const history = await pm.state.get(prefix + 'history') || initialHistory;
   const observations = await pm.state.get(prefix + 'observations') || [];

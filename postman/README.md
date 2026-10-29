@@ -80,3 +80,23 @@ Restart simulation before each run. Results/PNGs are in
 `TASK_COMPLETED` and `OBSERVATION_ADDED` are new coordinator notification types.
 `DUE_SOON` now also reaches the coordinator. Deploy this compatible frontend
 before the backend starts emitting new types; old tabs need to reload.
+
+## Evolución a WebSocket
+
+Con VITE_NOTIFICATIONS_REALTIME_ENABLED=true, la consulta30s sólo se usa cuando
+el canal no está conectado. El cliente solicita ticket de un solo uso y recupera
+la lista al conectar y recibir invalidación; no envía el JWT por la URL WebSocket.
+Ver el runbook backend docs/notificaciones_tiempo_real_qa.md y las pruebas de
+notificationRealtime para sesión vencida, fallos, latidos y reconexión.
+
+Auditoría reproducible de cliente en tiempo real:
+
+```bash
+postman simulation run postman/simulations/realtime-workflows.sim.yaml --port 4954 --no-history
+# En otra terminal: build/preview con VITE_NOTIFICATIONS_REALTIME_ENABLED=true
+# y VITE_API_URL=http://127.0.0.1:4954/api/v1, puerto5189.
+node scripts/realtime-notifications-audit.cjs
+```
+
+El script abre WebSocket local4953, emite invalidaciones y comprueba que no haya
+GETperiódicos en31s, recuperación y presentación móvil. Son fixtures, no AWS.

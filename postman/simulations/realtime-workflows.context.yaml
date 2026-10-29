@@ -1,0 +1,16 @@
+purpose:
+  stands_in_for: COMPIRA HTTP APIs and a separate local WebSocket broadcaster driven by the browser audit.
+  unblocks: Real browser fetch, socket, reconnect and no-polling verification without cloud credentials.
+assumptions:
+  - id: realtime-client-contract
+    status: supported
+    claim: A connected production frontend reloads notices on invalidation, avoids30s queries and recovers after a new connection.
+    reason: The fixture HTTP provider models persisted notices and the audit controls actual socket events; neither implements backend delivery.
+    verification: Chrome production build passed connected socket, event refresh under5s, noGETpolling over31s, reconnect recovery and mobile layout. Real HTTP calls are recorded in Postman logs; WebSocket invalidations are audit-driven. Does not prove AWS authorization/outbox.
+    source: src/features/notifications/notificationRealtime.ts; postman/mocks/coordinator-workflows/default.js
+    updated_at: '2026-10-29'
+fingerprints:
+  - id: realtime-browser-local
+    date: '2026-10-29'
+    commit: 34717b94a934c7cdb1567d59f186a1ecb32894dd
+    cli: '1.74.0'

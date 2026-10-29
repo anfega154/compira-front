@@ -17,10 +17,13 @@ import './notifications.css'
 const LABELS: Record<TaskNotification['type'], string> = {
   ASSIGNED: 'Se te asignó la tarea', REASSIGNED: 'Se te reasignó la tarea',
   DUE_SOON: 'Próxima a vencer', OVERDUE: 'Tarea retrasada',
+  TASK_COMPLETED: 'Tarea completada por el colaborador', OBSERVATION_ADDED: 'Nueva observación en la tarea',
 }
 
 const ICONS: Record<TaskNotification['type'], ReactNode> = {
   ASSIGNED: <path d="M20 6 9 17l-5-5" />,
+  TASK_COMPLETED: <><circle cx="12" cy="12" r="9" /><path d="m8 12 3 3 5-6" /></>,
+  OBSERVATION_ADDED: <path d="M4 4h16v12H8l-4 4V4Z" />,
   REASSIGNED: <><path d="M3 2v6h6" /><path d="M3 13a9 9 0 1 0 3-7L3 8" /></>,
   DUE_SOON: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
   OVERDUE: <><path d="M12 9v4M12 17h.01" /><path d="M10.3 3.3 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.3a2 2 0 0 0-3.4 0Z" /></>,

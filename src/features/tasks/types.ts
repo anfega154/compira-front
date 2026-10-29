@@ -36,6 +36,8 @@ export type TaskObservation = {
   id: string
   taskId: string
   authorUserId: string
+  authorName?: string | null
+  authorEmail?: string | null
   content: string
   createdAt: string
 }
@@ -45,6 +47,8 @@ export type TaskHistoryEntry = {
   taskId: string
   event: TaskHistoryEventName
   actorUserId: string | null
+  actorName?: string | null
+  actorEmail?: string | null
   previousValue: string | null
   newValue: string | null
   detail: string | null

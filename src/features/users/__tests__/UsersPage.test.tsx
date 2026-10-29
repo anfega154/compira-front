@@ -36,6 +36,15 @@ afterEach(() => {
 })
 
 describe('UsersPage (HU-40 / HU-10)', () => {
+  it('shows the teams coordinated by a coordinator rather than a misleading no-team label', async () => {
+    fetchMock.mockResolvedValueOnce(Response.json([buildUser({ email: 'coordinator@example.test', roles: ['COORDINATOR'], teamName: 'Operaciones, Ventas' })]))
+    renderWithProviders(<UsersPage />)
+    const row = await screen.findByRole('row', { name: /coordinator@example.test/ })
+    expect(within(row).getByText('Coordinador')).toBeVisible()
+    expect(within(row).getByText('Operaciones, Ventas')).toBeVisible()
+    expect(within(row).queryByText('Sin equipo')).not.toBeInTheDocument()
+  })
+
   it('lists the organization users with their roles and team', async () => {
     fetchMock.mockResolvedValueOnce(Response.json([buildUser()]))
     renderWithProviders(<UsersPage />)

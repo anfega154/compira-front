@@ -4,7 +4,7 @@ export type TaskNotification = {
   id: string
   taskId: string
   taskTitle: string
-  type: 'ASSIGNED' | 'REASSIGNED' | 'DUE_SOON' | 'OVERDUE'
+  type: 'ASSIGNED' | 'REASSIGNED' | 'DUE_SOON' | 'OVERDUE' | 'TASK_COMPLETED' | 'OBSERVATION_ADDED'
   createdAt: string
   /** ISO timestamp when the recipient read the notice, or null when unread. */
   readAt: string | null
@@ -19,7 +19,7 @@ function isNotification(value: unknown): value is TaskNotification {
     && 'taskId' in value && typeof value.taskId === 'string'
     && 'taskTitle' in value && typeof value.taskTitle === 'string'
     && 'createdAt' in value && typeof value.createdAt === 'string' && Number.isFinite(Date.parse(value.createdAt))
-    && 'type' in value && ['ASSIGNED', 'REASSIGNED', 'DUE_SOON', 'OVERDUE'].some(type => type === value.type)
+    && 'type' in value && ['ASSIGNED', 'REASSIGNED', 'DUE_SOON', 'OVERDUE', 'TASK_COMPLETED', 'OBSERVATION_ADDED'].some(type => type === value.type)
     && (!('readAt' in value) || value.readAt === null || typeof value.readAt === 'string')
 }
 

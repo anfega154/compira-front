@@ -62,3 +62,21 @@ ECS/Aurora/ALB/network usage. No free-tier allowance or credits are assumed.
 Multiple tabs/devices and longer sessions increase traffic; slow responses and
 browser throttling reduce the polling frequency. Actual database/compute impact
 requires measuring real usage; it cannot be priced from request count alone.
+
+
+## Coordinator activity workflows
+
+`simulations/coordinator-workflows.sim.yaml` reuses the task/notification/user
+contracts with fictional identities; its `.context.yaml` states the scope and
+remaining real-provider verification. Start it on port4951, build with
+`VITE_API_URL=http://127.0.0.1:4951/api/v1 npm run build -- --outDir /tmp/compira-coordinator-ui-build`,
+and preview on5188. Run `scripts/coordinator-workflows-audit.cjs` with the external
+Playwright module available. The audit completes a task as collaborator, records
+an observation as coordinator, checks notification labels, historical authors,
+automatic system actor, administrator team names and390px layout over actual HTTP.
+Restart simulation before each run. Results/PNGs are in
+`/tmp/compira-coordinator-workflows-audit`.
+
+`TASK_COMPLETED` and `OBSERVATION_ADDED` are new coordinator notification types.
+`DUE_SOON` now also reaches the coordinator. Deploy this compatible frontend
+before the backend starts emitting new types; old tabs need to reload.

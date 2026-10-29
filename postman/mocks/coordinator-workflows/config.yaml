@@ -1,0 +1,9 @@
+version: 1
+name: compira-coordinator-workflows
+slug: compira-coordinator-workflows
+protocol: http
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true

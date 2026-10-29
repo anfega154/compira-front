@@ -9,7 +9,7 @@ import {
 } from './tasksApi'
 import { TaskActionModal } from './TaskActionModal'
 import { TaskStatusBadge } from './TaskStatusBadge'
-import { TASK_EVENT_LABELS, formatDateTime } from './taskLabels'
+import { TASK_EVENT_LABELS, formatDateTime, formatActivityAuthor } from './taskLabels'
 import type { Task, TaskHistoryEntry, TaskObservation } from './types'
 import { useAuth } from '../auth/useAuth'
 
@@ -126,6 +126,7 @@ export function TaskDetailPage() {
               {observations.map((observation) => (
                 <li key={observation.id}>
                   <div>{observation.content}</div>
+                  <div className="observation-meta">Por: {formatActivityAuthor(observation.authorUserId, observation.authorName, observation.authorEmail)}</div>
                   <div className="observation-meta">{formatDateTime(observation.createdAt)}</div>
                 </li>
               ))}
@@ -144,6 +145,7 @@ export function TaskDetailPage() {
               {history.map((entry) => (
                 <li key={entry.id}>
                   <div className="event-title">{TASK_EVENT_LABELS[entry.event]}</div>
+                  <div className="event-meta">Por: {formatActivityAuthor(entry.actorUserId, entry.actorName, entry.actorEmail)}</div>
                   <div className="event-meta">{formatDateTime(entry.createdAt)}</div>
                   {renderChange(entry)}
                 </li>

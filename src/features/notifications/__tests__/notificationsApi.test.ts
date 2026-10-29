@@ -71,3 +71,10 @@ it('accepts readAt and defaults missing readAt to null', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json([legacy, read])))
   await expect(getLatestNotifications(new AbortController().signal)).resolves.toEqual([{ ...legacy, readAt: null }, read])
 })
+
+
+it.each(['TASK_COMPLETED', 'OBSERVATION_ADDED'] as const)('accepts the new coordinator event %s', async type => {
+  const notification = module3Notification(type)
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json([notification])))
+  await expect(getLatestNotifications(new AbortController().signal)).resolves.toEqual([notification])
+})

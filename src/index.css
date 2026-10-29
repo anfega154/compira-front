@@ -1588,6 +1588,7 @@ td a:hover {
 }
 
 .task-timeline .event-meta {
+  overflow-wrap: anywhere;
   font-size: var(--fs-meta);
   color: var(--text-muted);
 }
@@ -1615,6 +1616,7 @@ td a:hover {
 }
 
 .observation-list .observation-meta {
+  overflow-wrap: anywhere;
   font-size: var(--fs-meta);
   color: var(--text-muted);
   margin-top: var(--space-2);

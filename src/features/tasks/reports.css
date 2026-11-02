@@ -1,0 +1,34 @@
+.executive-reports { gap: var(--space-5, 1.25rem); }
+.executive-reports h3 { margin-bottom: .8rem; }
+.executive-reports .panel { min-width: 0; }
+.report-filter-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.report-filter-grid label, .report-search { display: flex; flex-direction: column; gap: .45rem; font-size: .875rem; }
+.report-filter-grid input, .report-filter-grid select, .report-search input { width: 100%; min-width: 0; padding: .7rem; border: 1px solid var(--border-color, #334155); border-radius: .6rem; color: inherit; background: var(--surface-color, #0f172a); font: inherit; }
+.report-control dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.report-control dt { font-size: .8rem; opacity: .75; }
+.report-control dd { margin: .3rem 0 0; overflow-wrap: anywhere; }
+.report-id { display: block; font-size: .75rem; opacity: .75; overflow-wrap: anywhere; }
+.report-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+.report-kpis .metric-card { min-width: 0; }
+.report-kpis .metric-value { font-size: clamp(1.25rem, 2vw, 2rem); }
+.report-two-column { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.executive-reports li { line-height: 1.65; margin-bottom: .65rem; overflow-wrap: anywhere; }
+.executive-reports ul, .executive-reports ol { padding-left: 1.3rem; }
+.report-distribution { padding: 0 !important; list-style: none; }
+.report-distribution li { display: grid; grid-template-columns: 1fr 4rem 4rem; gap: .5rem; border-bottom: 1px solid #334155; padding-bottom: .5rem; }
+.report-quality { display: grid; grid-template-columns: 1fr 4rem; gap: .8rem; }
+.report-quality dd { margin: 0; font-weight: 700; }
+.report-pagination { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: .8rem; margin-top: 1rem; }
+.report-live { overflow-wrap: anywhere; font-size: .85rem; }
+.executive-reports td { max-width: 24rem; white-space: normal; overflow-wrap: anywhere; }
+.executive-reports td small { display: block; font-size: .75rem; opacity: .75; }
+@media (max-width: 1000px) { .report-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .report-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 650px) { .report-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .report-two-column, .report-control dl, .report-filter-grid { grid-template-columns: 1fr; } .executive-reports .page-header { align-items: stretch; } }
+
+.report-filter-grid { border: 0; padding: 0; margin-inline: 0; min-width: 0; }
+/* Mantener columnas legibles: desplazar sólo la tabla, nunca toda la página. */
+.executive-reports .table-wrapper { max-width: 100%; overflow-x: auto; }
+.executive-reports .table-wrapper table { min-width: 850px; }
+.executive-reports .table-wrapper[aria-label="Cohortes mensuales"] table { min-width: 0; }
+.executive-reports .table-wrapper td:first-child { min-width: 180px; }
+.executive-reports .table-wrapper[aria-label="Cohortes mensuales"] td:first-child { min-width: 0; }

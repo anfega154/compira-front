@@ -23,7 +23,7 @@ describe('computeDashboardMetrics', () => {
   it('returns zeroed metrics for an empty list', () => {
     const metrics = computeDashboardMetrics([], NOW)
     expect(metrics.total).toBe(0)
-    expect(metrics.compliance).toBe(0)
+    expect(metrics.compliance).toBeNull()
     expect(metrics.statusDistribution).toEqual([])
     expect(metrics.workload).toEqual([])
     expect(metrics.upcomingDeadlines).toEqual([])

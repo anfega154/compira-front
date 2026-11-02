@@ -102,6 +102,7 @@ export type Assignee = {
 }
 
 export type TaskIndicators = {
+  evaluableClosedCount?: number
   totalTasks: number
   overdueCount: number
   dueSoonCount: number

@@ -1,0 +1,213 @@
+{
+  "reportId": "50000000-0000-0000-0000-000000000001",
+  "version": "1.0",
+  "generatedAt": "2026-11-01T20:00:00Z",
+  "timeZone": "America/Bogota",
+  "scope": "ORGANIZATION",
+  "generatedBy": "Carolina López",
+  "filters": {
+    "from": null,
+    "to": null,
+    "dateBasis": "CREATED",
+    "teamId": null,
+    "responsibleId": null,
+    "unassigned": false,
+    "status": null
+  },
+  "summary": {
+    "total": 3,
+    "active": 2,
+    "pending": 1,
+    "inProgress": 0,
+    "completed": 0,
+    "closed": 1,
+    "cancelled": 0,
+    "overdue": 1,
+    "dueSoon": 0,
+    "unassigned": 1,
+    "evaluableClosed": 1,
+    "closedOnTime": 1,
+    "progressPercentage": 33,
+    "compliancePercentage": 100,
+    "averageClosureHours": 12,
+    "medianClosureHours": 12,
+    "averageActiveAgeHours": 48,
+    "oldestActiveAgeHours": 72,
+    "maximumOverdueHours": 24
+  },
+  "quality": {
+    "missingDueDate": 0,
+    "missingTeam": 0,
+    "closedWithoutHistory": 0,
+    "invalidClosureDates": 0
+  },
+  "teams": [
+    {
+      "id": "20000000-0000-0000-0000-000000000001",
+      "name": "Operaciones",
+      "email": null,
+      "metrics": {
+        "total": 3,
+        "active": 2,
+        "pending": 1,
+        "inProgress": 0,
+        "completed": 0,
+        "closed": 1,
+        "cancelled": 0,
+        "overdue": 1,
+        "dueSoon": 0,
+        "unassigned": 1,
+        "evaluableClosed": 1,
+        "closedOnTime": 1,
+        "progressPercentage": 33,
+        "compliancePercentage": 100,
+        "averageClosureHours": 12,
+        "medianClosureHours": 12,
+        "averageActiveAgeHours": 48,
+        "oldestActiveAgeHours": 72,
+        "maximumOverdueHours": 24
+      }
+    }
+  ],
+  "assignees": [
+    {
+      "id": "10000000-0000-0000-0000-000000000001",
+      "name": "Ana García",
+      "email": "ana@example.test",
+      "metrics": {
+        "total": 2,
+        "active": 1,
+        "pending": 0,
+        "inProgress": 0,
+        "completed": 0,
+        "closed": 1,
+        "cancelled": 0,
+        "overdue": 1,
+        "dueSoon": 0,
+        "unassigned": 0,
+        "evaluableClosed": 1,
+        "closedOnTime": 1,
+        "progressPercentage": 50,
+        "compliancePercentage": 100,
+        "averageClosureHours": 12,
+        "medianClosureHours": 12,
+        "averageActiveAgeHours": 72,
+        "oldestActiveAgeHours": 72,
+        "maximumOverdueHours": 24
+      }
+    },
+    {
+      "id": null,
+      "name": "Sin responsable",
+      "email": null,
+      "metrics": {
+        "total": 1,
+        "active": 1,
+        "pending": 1,
+        "inProgress": 0,
+        "completed": 0,
+        "closed": 0,
+        "cancelled": 0,
+        "overdue": 0,
+        "dueSoon": 0,
+        "unassigned": 1,
+        "evaluableClosed": 0,
+        "closedOnTime": 0,
+        "progressPercentage": 0,
+        "compliancePercentage": null,
+        "averageClosureHours": null,
+        "medianClosureHours": null,
+        "averageActiveAgeHours": 24,
+        "oldestActiveAgeHours": 24,
+        "maximumOverdueHours": null
+      }
+    }
+  ],
+  "distribution": [
+    {
+      "status": "CLOSED",
+      "count": 1
+    },
+    {
+      "status": "DELAYED",
+      "count": 1
+    },
+    {
+      "status": "PENDING",
+      "count": 1
+    }
+  ],
+  "monthlyCohorts": [
+    {
+      "month": "2026-10",
+      "created": 3,
+      "closed": 1
+    }
+  ],
+  "findings": [
+    "El corte contiene 3 tareas; 2 activas y 1 cerrada.",
+    "Una tarea activa está vencida."
+  ],
+  "recommendations": [
+    "Priorizar la tarea vencida y asignar responsable."
+  ],
+  "tasks": [
+    {
+      "id": "30000000-0000-0000-0000-000000000001",
+      "title": "Revisión de operación Ñandú",
+      "teamId": "20000000-0000-0000-0000-000000000001",
+      "teamName": "Operaciones",
+      "responsibleId": "10000000-0000-0000-0000-000000000001",
+      "responsibleName": "Ana García",
+      "responsibleEmail": "ana@example.test",
+      "status": "CLOSED",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "dueDate": "2026-10-02T12:00:00Z",
+      "closedAt": "2026-10-02T00:00:00Z",
+      "lastActivityAt": "2026-10-03T12:00:00Z",
+      "observations": 2,
+      "overdueHours": null,
+      "ageHours": null,
+      "closureHours": 12,
+      "closedOnTime": true
+    },
+    {
+      "id": "30000000-0000-0000-0000-000000000002",
+      "title": "Entrega vencida",
+      "teamId": "20000000-0000-0000-0000-000000000001",
+      "teamName": "Operaciones",
+      "responsibleId": "10000000-0000-0000-0000-000000000001",
+      "responsibleName": "Ana García",
+      "responsibleEmail": "ana@example.test",
+      "status": "DELAYED",
+      "createdAt": "2026-10-29T20:00:00Z",
+      "dueDate": "2026-10-31T20:00:00Z",
+      "closedAt": null,
+      "lastActivityAt": "2026-10-30T20:00:00Z",
+      "observations": 2,
+      "overdueHours": 24,
+      "ageHours": 72,
+      "closureHours": null,
+      "closedOnTime": null
+    },
+    {
+      "id": "30000000-0000-0000-0000-000000000003",
+      "title": "Preparar presupuesto",
+      "teamId": "20000000-0000-0000-0000-000000000001",
+      "teamName": "Operaciones",
+      "responsibleId": null,
+      "responsibleName": null,
+      "responsibleEmail": null,
+      "status": "PENDING",
+      "createdAt": "2026-10-31T20:00:00Z",
+      "dueDate": "2026-11-10T12:00:00Z",
+      "closedAt": null,
+      "lastActivityAt": "2026-10-31T20:00:00Z",
+      "observations": 2,
+      "overdueHours": null,
+      "ageHours": 24,
+      "closureHours": null,
+      "closedOnTime": null
+    }
+  ]
+}

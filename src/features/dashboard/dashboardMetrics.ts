@@ -33,7 +33,7 @@ export type DashboardMetrics = {
   /** Tasks whose dueDate is in the past and are not completed/closed/cancelled. */
   overdue: number
   /** Completed + closed over the total of non-cancelled tasks, as a percentage. */
-  compliance: number
+  compliance: number | null
   statusDistribution: StatusDistribution[]
   workload: WorkloadEntry[]
   upcomingDeadlines: DeadlineEntry[]
@@ -80,7 +80,7 @@ export function computeDashboardMetrics(tasks: Task[], now: number = Date.now())
   const total = tasks.length
   const done = counts.COMPLETED + counts.CLOSED
   const nonCancelled = total - counts.CANCELLED
-  const compliance = nonCancelled > 0 ? Math.round((done / nonCancelled) * 100) : 0
+  const compliance = nonCancelled > 0 ? Math.round((done / nonCancelled) * 100) : null
 
   const statusDistribution: StatusDistribution[] = (
     ['PENDING', 'IN_PROGRESS', 'DELAYED', 'COMPLETED', 'CLOSED', 'CANCELLED'] as TaskStatus[]

@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { TaskRequestError, getManagedTasks } from '../tasks/tasksApi'
+import { TaskRequestError, getManagedTasks, getTaskIndicators } from '../tasks/tasksApi'
 import { TaskStatusBadge } from '../tasks/TaskStatusBadge'
 import { TASK_STATUS_LABELS, formatDateTime } from '../tasks/taskLabels'
 import type { Task, TaskStatus } from '../tasks/types'
-import { getUsers } from '../users/usersApi'
 import { useAuth } from '../auth/useAuth'
 import { canManageTaskLifecycle } from '../auth/permissions'
 import { computeDashboardMetrics } from './dashboardMetrics'
@@ -55,35 +54,9 @@ export function DashboardPage() {
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'ALL'>('ALL')
   const [responsibleFilter, setResponsibleFilter] = useState<string>('ALL')
   const [directory, setDirectory] = useState<Map<string, UserDisplay>>(new Map())
-  // The user directory (GET /users) is Administrator-only. When it is not
-  // available (e.g. Coordinator → 403) we cannot resolve responsible names, so
-  // responsible-based indicators are hidden entirely rather than shown with
-  // meaningless identifiers.
-  const [directoryAvailable, setDirectoryAvailable] = useState(false)
+  const [directoryAvailable, setDirectoryAvailable] = useState(true)
 
-  useEffect(() => {
-    void loadTasks()
-  }, [])
-
-  useEffect(() => {
-    const controller = new AbortController()
-    void getUsers(controller.signal)
-      .then((users) => {
-        if (controller.signal.aborted) return
-        const map = new Map<string, UserDisplay>()
-        for (const u of users) {
-          const name = `${u.firstName} ${u.lastName}`.trim()
-          map.set(u.id, {
-            label: name ? `${name} · ${u.email}` : u.email,
-            initials: `${u.firstName.charAt(0)}${u.lastName.charAt(0)}`.toUpperCase() || fallbackInitials(u.id),
-          })
-        }
-        setDirectory(map)
-        setDirectoryAvailable(true)
-      })
-      .catch(() => { /* directory unavailable: responsible indicators stay hidden */ })
-    return () => controller.abort()
-  }, [])
+  useEffect(() => { void loadTasks() }, [])
 
   const resolveUser = useMemo(() => makeResolver(directory), [directory])
 
@@ -91,7 +64,15 @@ export function DashboardPage() {
     setLoading(true)
     setError(null)
     try {
-      setTasks(await getManagedTasks())
+      const [data, indicators] = await Promise.all([getManagedTasks(), getTaskIndicators().catch(() => null)])
+      setTasks(data)
+      setDirectoryAvailable(indicators !== null)
+      const map = new Map<string, UserDisplay>()
+      for (const assignee of indicators?.assignees ?? []) {
+        const name = assignee.name || assignee.email || 'Responsable no disponible'
+        map.set(assignee.id, { label: assignee.name && assignee.email ? `${assignee.name} · ${assignee.email}` : name, initials: name.slice(0, 2).toUpperCase() })
+      }
+      setDirectory(map)
     } catch (requestError) {
       setError(getErrorMessage(requestError))
     } finally {
@@ -109,7 +90,8 @@ export function DashboardPage() {
     () =>
       tasks.filter((task) => {
         if (statusFilter !== 'ALL' && task.status !== statusFilter) return false
-        if (responsibleFilter !== 'ALL' && task.responsibleUserId !== responsibleFilter) return false
+        if (responsibleFilter === 'UNASSIGNED' && task.responsibleUserId !== null) return false
+        if (responsibleFilter !== 'ALL' && responsibleFilter !== 'UNASSIGNED' && task.responsibleUserId !== responsibleFilter) return false
         return true
       }),
     [tasks, statusFilter, responsibleFilter],
@@ -144,6 +126,7 @@ export function DashboardPage() {
 
       {error ? <div className="feedback error" role="alert">{error}</div> : null}
 
+      {!directoryAvailable && <p className="feedback" role="status">No se pudieron resolver algunos nombres. Los indicadores siguen visibles; vuelve a recargar.</p>}
       <div className="filter-bar">
         <label className="task-form-field" style={{ gap: 'var(--space-1)' }}>
           <span className="field-hint">Estado</span>
@@ -158,7 +141,7 @@ export function DashboardPage() {
             ))}
           </select>
         </label>
-        {directoryAvailable && (
+        {(
           <label className="task-form-field" style={{ gap: 'var(--space-1)' }}>
             <span className="field-hint">Responsable</span>
             <select
@@ -168,6 +151,7 @@ export function DashboardPage() {
               aria-label="Filtrar por responsable"
             >
               <option value="ALL">Todos los responsables</option>
+              <option value="UNASSIGNED">Sin responsable</option>
               {responsibleOptions.map((id) => (
                 <option key={id} value={id}>{resolveUser(id).label}</option>
               ))}
@@ -206,7 +190,7 @@ export function DashboardPage() {
             <MetricCard label="En progreso" value={metrics.inProgress} tone="info" icon="progress" />
             <MetricCard label="Completadas" value={metrics.completed} tone="success" icon="check" />
             <MetricCard label="Vencidas" value={metrics.overdue} tone="danger" icon="alert" />
-            <MetricCard label="Cumplimiento" value={`${metrics.compliance}%`} tone="success" icon="target" />
+            <MetricCard label="Avance de tareas" value={metrics.compliance === null ? 'N/D' : `${metrics.compliance}%`} tone="success" icon="target" />
           </div>
 
           <div className="dashboard-grid">
@@ -216,11 +200,11 @@ export function DashboardPage() {
             </article>
 
             <article className="panel span-6">
-              <div className="panel-header"><div><h3>Cumplimiento</h3><p>Tareas completadas o cerradas sobre el total vigente.</p></div></div>
+              <div className="panel-header"><div><h3>Avance de tareas</h3><p>Completadas o cerradas sobre el total sin canceladas. La puntualidad de los cierres se consulta en Reportes.</p></div></div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                <span className="compliance-value">{metrics.compliance}%</span>
-                <div className="progress-track" role="progressbar" aria-valuenow={metrics.compliance} aria-valuemin={0} aria-valuemax={100}>
-                  <div className="progress-fill" style={{ width: `${metrics.compliance}%` }} />
+                <span className="compliance-value">{metrics.compliance === null ? 'N/D' : `${metrics.compliance}%`}</span>
+                <div className="progress-track" role="progressbar" aria-valuenow={metrics.compliance ?? 0} aria-valuemin={0} aria-valuemax={100}>
+                  <div className="progress-fill" style={{ width: `${metrics.compliance ?? 0}%` }} />
                 </div>
                 <p className="metric-foot">
                   {metrics.completed + metrics.closed} de {metrics.total - metrics.cancelled} tareas vigentes finalizadas.
@@ -228,7 +212,7 @@ export function DashboardPage() {
               </div>
             </article>
 
-            {directoryAvailable && (
+            {(
               <article className="panel span-6">
                 <div className="panel-header"><div><h3>Carga por responsable</h3><p>Número de tareas por persona responsable.</p></div></div>
                 {metrics.workload.length === 0 ? (
@@ -257,7 +241,7 @@ export function DashboardPage() {
               </article>
             )}
 
-            <article className={`panel ${directoryAvailable ? 'span-6' : 'span-12'}`}>
+            <article className={`panel span-6`}>
               <div className="panel-header"><div><h3>Próximos vencimientos</h3><p>Tareas vigentes ordenadas por fecha límite.</p></div></div>
               {metrics.upcomingDeadlines.length === 0 ? (
                 <EmptyBlock title="Sin vencimientos" message="No hay tareas vigentes con fecha límite." compact />
@@ -287,7 +271,7 @@ export function DashboardPage() {
                 <div className="table-wrapper" tabIndex={0} role="region" aria-label="Listado del panel">
                   <table>
                     <thead>
-                      <tr><th>Título</th><th>Estado</th><th>Fecha límite</th>{directoryAvailable && <th>Responsable</th>}</tr>
+                      <tr><th>Título</th><th>Estado</th><th>Fecha límite</th><th>Responsable</th></tr>
                     </thead>
                     <tbody>
                       {metrics.overdueTasks.map((task) => (
@@ -295,7 +279,7 @@ export function DashboardPage() {
                           <td><Link to={`/tasks/${task.id}`}>{task.title}</Link></td>
                           <td><TaskStatusBadge status={task.status} /></td>
                           <td>{formatDateTime(task.dueDate)}</td>
-                          {directoryAvailable && (
+                          {(
                             <td>
                               {task.responsibleUserId ? (
                                 <span className="cell-user">

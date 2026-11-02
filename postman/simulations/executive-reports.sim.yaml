@@ -1,0 +1,5 @@
+simulation: compira-executive-reports
+routing: path
+mocks:
+  - routeKey: api
+    path: ../mocks/executive-reports/config.yaml

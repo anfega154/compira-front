@@ -332,7 +332,7 @@ function TaskIndicatorsPanel({ indicators }: { indicators: TaskIndicators }) {
       <div className="panel-header">
         <div>
           <h3>Indicadores</h3>
-          <p>Seguimiento en tiempo real del alcance de tus tareas.</p>
+          <p>Resumen del alcance completo al recargar. Los filtros siguientes afectan sólo el listado.</p>
         </div>
       </div>
       <dl className="indicators-grid">
@@ -349,12 +349,12 @@ function TaskIndicatorsPanel({ indicators }: { indicators: TaskIndicators }) {
           <dd>{indicators.dueSoonCount}</dd>
         </div>
         <div className="indicator-card indicator-compliance">
-          <dt>Cumplimiento</dt>
+          <dt>Cumplimiento a tiempo</dt>
           <dd>{indicators.compliancePercentage === null ? '—' : `${indicators.compliancePercentage}%`}</dd>
         </div>
         <div className="indicator-card indicator-ontime">
           <dt>Cerradas a tiempo</dt>
-          <dd>{indicators.closedOnTimeCount}/{indicators.closedCount}</dd>
+          <dd>{indicators.closedOnTimeCount}/{indicators.evaluableClosedCount ?? indicators.closedCount} evaluables</dd>
         </div>
       </dl>
       <div className="table-wrapper" tabIndex={0} role="region" aria-label="Carga de trabajo por responsable">

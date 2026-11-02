@@ -54,3 +54,7 @@ npm run lint
 Este proyecto quedó conectado a:
 
 - [anfega154/compira-front](https://github.com/anfega154/compira-front)
+
+## Reportes gerenciales y exportación PDF
+
+Ver [manual funcional, contrato, fórmulas y operación](docs/reportes-gerenciales.md).

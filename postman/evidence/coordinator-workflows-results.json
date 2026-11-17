@@ -1,0 +1,75 @@
+{
+  "passed": [
+    "completion-notice",
+    "due-soon-notice",
+    "observation-notice",
+    "activity-authors",
+    "automatic-actor",
+    "administrator-coordinator-teams",
+    "mobile-layout"
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:4951/api/v1/notifications"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:4951/api/v1/tasks/assigned"
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:4951/api/v1/tasks/task-1/status"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:4951/api/v1/tasks/assigned"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:4951/api/v1/notifications"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:4951/api/v1/tasks/task-1"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:4951/api/v1/tasks/task-1/observations"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:4951/api/v1/tasks/task-1/history"
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:4951/api/v1/tasks/task-1/observations"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:4951/api/v1/tasks/task-1/history"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:4951/api/v1/notifications"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:4951/api/v1/tasks/task-1"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:4951/api/v1/tasks/task-1/observations"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:4951/api/v1/tasks/task-1/history"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:4951/api/v1/users"
+    }
+  ],
+  "failures": [],
+  "scope": "Real frontend HTTP to local Postman fixtures; backend delivery/security and AWS are verified separately."
+}

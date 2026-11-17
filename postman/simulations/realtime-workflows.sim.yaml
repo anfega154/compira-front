@@ -1,0 +1,6 @@
+simulation: compira-realtime-workflows
+routing: path
+mocks:
+  - name: coordinator-workflows
+    routeKey: api
+    path: ../mocks/coordinator-workflows/config.yaml

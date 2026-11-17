@@ -1,0 +1,45 @@
+{
+  "passed": [
+    "socket-connected",
+    "invalidation-refresh-under-five-seconds",
+    "no-thirty-second-poll-while-connected",
+    "reconnect-fetches-missed-notice",
+    "mobile-no-overflow"
+  ],
+  "notificationLatencyMs": 104,
+  "connections": 2,
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "at": 1793304477933
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/notifications/realtime-ticket",
+      "at": 1793304477935
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "at": 1793304478227
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "at": 1793304478418
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/notifications/realtime-ticket",
+      "at": 1793304511074
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "at": 1793304511084
+    }
+  ],
+  "failures": [],
+  "scope": "Real production browser against Postman HTTP + audit-driven WebSocket; no AWS/auth/provider-generation claim."
+}

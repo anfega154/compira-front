@@ -1,0 +1,23 @@
+purpose:
+  stands_in_for: COMPIRA task, notification and administrator user JSON endpoints.
+  unblocks: Browser verification of coordinator notices, visible actors and coordinated team names.
+assumptions:
+  - id: activity-display-contract
+    status: supported
+    claim: The frontend consumes additive actorName/actorEmail and authorName/authorEmail and the two new notification types without blocking existing notices.
+    reason: The user needs identifiable activity and coordinator completion/observation notices.
+    verification: On 2026-10-29 the real production frontend in Chrome consumed JSON via Postman: completion and observation POSTs succeeded, all three coordinator notice labels rendered, actor identities and automatic actions rendered, administrator showed coordinated teams, and mobile layout had no horizontal overflow. Backend generation was checked independently by 366 Java/PostgreSQL tests; this browser result alone does not establish provider correctness.
+    source: src/features/tasks/TaskDetailPage.tsx; src/features/notifications/notificationsApi.ts; postman/mocks/coordinator-workflows/default.js
+    updated_at: "2026-10-29"
+  - id: mock-auth-and-delivery-limit
+    status: unknown
+    claim: Actual AWS identity verification, authorization and delivery are not established by this simulation.
+    reason: Fixture bearer values select fictional actors; initial due-soon is a seeded response, not a running scheduler.
+    verification: Requires real backend security tests, PostgreSQL tests and deployment verification; no real credentials are used here.
+    source: postman/mocks/coordinator-workflows/default.js
+    updated_at: "2026-10-29"
+fingerprints:
+  - id: coordinator-workflows-local
+    date: "2026-10-29"
+    commit: d825c8bfca5b0cbcfc02426636c1cf43fb0b1b3a # Base dev; cambios auditados incluidos en este PR
+    cli: "1.74.0"

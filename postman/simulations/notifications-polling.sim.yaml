@@ -1,0 +1,12 @@
+simulation: compira-notifications-polling
+routing: path
+mocks:
+  - name: notifications-success
+    routeKey: api
+    path: ../mocks/ui-audit/config.yaml
+  - name: notifications-error
+    routeKey: api-error
+    path: ../mocks/ui-audit/notifications-error.js
+  - name: notifications-slow
+    routeKey: api-slow
+    path: ../mocks/ui-audit/notifications-slow.js

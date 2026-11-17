@@ -1,0 +1,83 @@
+[
+  {
+    "scenario": "success",
+    "requests": [
+      {
+        "url": "http://127.0.0.1:4947/api/v1/notifications",
+        "at": 1793218044682,
+        "method": "GET"
+      },
+      {
+        "url": "http://127.0.0.1:4947/api/v1/notifications",
+        "at": 1793218074685,
+        "method": "GET"
+      },
+      {
+        "url": "http://127.0.0.1:4947/api/v1/notifications",
+        "at": 1793218104726,
+        "method": "GET"
+      }
+    ],
+    "responses": [
+      {
+        "status": 200,
+        "at": 1793218044690
+      },
+      {
+        "status": 200,
+        "at": 1793218074713
+      },
+      {
+        "status": 200,
+        "at": 1793218104745
+      }
+    ],
+    "readStatePreserved": true
+  },
+  {
+    "scenario": "503",
+    "requests": [
+      {
+        "url": "http://127.0.0.1:4947/api-error/v1/notifications",
+        "at": 1793218044657,
+        "method": "GET"
+      },
+      {
+        "url": "http://127.0.0.1:4947/api-error/v1/notifications",
+        "at": 1793218074685,
+        "method": "GET"
+      }
+    ],
+    "responses": [
+      {
+        "status": 503,
+        "at": 1793218044690
+      },
+      {
+        "status": 503,
+        "at": 1793218074702
+      }
+    ]
+  },
+  {
+    "scenario": "20-second-latency",
+    "requests": [
+      {
+        "url": "http://127.0.0.1:4947/api-slow/v1/notifications",
+        "at": 1793218044657,
+        "method": "GET"
+      },
+      {
+        "url": "http://127.0.0.1:4947/api-slow/v1/notifications",
+        "at": 1793218089652,
+        "method": "GET"
+      }
+    ],
+    "failures": [
+      {
+        "at": 1793218059636,
+        "error": "net::ERR_ABORTED"
+      }
+    ]
+  }
+]

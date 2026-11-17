@@ -1,0 +1,30 @@
+purpose:
+  stands_in_for: API COMPIRA de equipos, indicadores, notificaciones y reporte ejecutivo con fixture sintético versionado derivado del DTO backend.
+  unblocks: Revisión de la aplicación real en Chrome y descarga PDF sin credenciales AWS ni modificaciones de datos.
+assumptions:
+  - id: caller-report-snapshot
+    status: supported
+    claim: En los escenarios locales ejecutados, exportar PDF reutiliza el corte autorizado recibido y no vuelve a solicitar el reporte aunque exista búsqueda en pantalla.
+    reason: Chrome real descargó PDF para ambos roles y el contador de GET del endpoint no cambió durante la exportación.
+    verification: Auditoría ejecutada el 2026-11-01;1440/390/320px; filtros pendientes deshabilitan exportar;503 borra el corte anterior; no hubo errores JS ni llamadas a /users. Se repite tras ajustes visuales.
+    source: scripts/executive-reports-audit.cjs; postman/mocks/executive-reports/default.js; /tmp/compira-executive-reports-audit/result.json
+    updated_at: '2026-11-01'
+  - id: provider-report-scope
+    status: supported
+    claim: La implementación backend consultada limita coordinador a equipos actuales y aplica filtros antes del máximo5000, con cierres obtenidos del historial.
+    reason: Código y prueba PostgreSQL17 con migraciones reales; la simulación por sí sola no prueba autorización.
+    verification: ExecutiveReportPersistenceTest pasa5 pruebas, incluye equipo ajeno sin resultados, creador distinto del coordinador actual y fechas inclusivas Bogotá; pruebas HTTP y seguridad validan400/401/403.
+    source: ../compira-back/infrastructure/driven-adapters/r2dbc-postgresql/src/test/java/co/com/compira/r2dbc/ExecutiveReportPersistenceTest.java; ../compira-back/infrastructure/entry-points/reactive-web/src/test/java/co/com/compira/api/report/ExecutiveReportHandlerTest.java
+    updated_at: '2026-11-01'
+  - id: provider-aws-authenticated-report
+    status: unknown
+    claim: La versión desplegada en AWS permite generar reportes con sesiones Cognito reales de ambos roles.
+    reason: No se ha ejercitado una sesión Cognito real en esta auditoría. Los tokens de esta simulación son exclusivamente sintéticos.
+    verification: Pendiente una sesión autorizada real posterior al despliegue. El control público de salud/OpenAPI/401 no sustituye esta prueba.
+    source: postman/mocks/executive-reports/default.js; docs/reportes-gerenciales.md
+    updated_at: '2026-11-01'
+fingerprints:
+  - id: executive-report-local-20261101
+    date: '2026-11-01'
+    commit: feat/reportes-gerenciales-pdf (árbol local previo al PR)
+    cli: Postman CLI simulation run con --port4968 --no-history; Chrome real via Playwright
